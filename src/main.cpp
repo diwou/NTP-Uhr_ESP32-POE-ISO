@@ -176,14 +176,6 @@ void setup() {
   esp_event_handler_register(ETH_EVENT, ETHERNET_EVENT_START, forceEth100Handler, nullptr);
   esp_event_handler_register(ETH_EVENT, ETHERNET_EVENT_CONNECTED, forceEth100Handler, nullptr);
 
-  // PHY vor ETH.begin() hart zuruecksetzen/power-cyclen. Das bildet den
-  // funktionierenden stromlos-Test nach und bricht haengende 10M-Link-Zustaende.
-  pinMode(ETH_POWER_PIN, OUTPUT);
-  digitalWrite(ETH_POWER_PIN, LOW);
-  delay(250);
-  digitalWrite(ETH_POWER_PIN, HIGH);
-  delay(250);
-
   // Ethernet (statische IP vor begin() konfigurieren, falls gewünscht)
   WiFi.onEvent(WiFiEvent);
   if (!g_use_dhcp) {
