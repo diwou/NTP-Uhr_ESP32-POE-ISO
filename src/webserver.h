@@ -341,6 +341,15 @@ String htmlPage() {
       "</div>"
     "</div>"
 
+    "<div class='card'>"
+      "<div class='card-hd'>Recovery</div>"
+      "<div class='hint'>Setzt NTP-, Anzeige- und Netzwerkeinstellungen auf die Firmware-Standardwerte zur&uuml;ck und startet neu.</div>"
+      "<div class='actions'>"
+        "<button class='btn btn-d' id='btn-factory' type='button' onclick='factoryReset()'>"
+          "Werkseinstellungen</button>"
+      "</div>"
+    "</div>"
+
     "</div>" // end t-system
 
     "<div class='toast' id='toast'></div>"
@@ -414,6 +423,15 @@ String htmlPage() {
         ".then(function(){toast('Neustart\u2026','info');})"
         ".catch(function(){});"
     "};"
+
+    // Recovery reset
+    "function factoryReset(){"
+      "if(!confirm('Alle gespeicherten NTP-, Anzeige- und Netzwerkeinstellungen zuruecksetzen und neu starten?'))return;"
+      "fetch('/factory-reset',{method:'POST'})"
+        ".then(function(r){return r.json();})"
+        ".then(function(d){toast(d.ok?'Werkseinstellungen gesetzt, Neustart\u2026':'Reset fehlgeschlagen',d.ok?'info':'err');})"
+        ".catch(function(){toast('Fehler','err');});"
+    "}"
 
     // OTA upload
     "function startOTA(){"
@@ -519,6 +537,24 @@ void handleReboot() {
   server.send(200, "application/json", "{\"ok\":true}");
   delay(200);
   ESP.restart();
+}
+
+void handleFactoryReset() {
+  bool ok = true;
+  ok = ok && prefs.begin("ntp", false);
+  if (ok) ok = prefs.clear();
+  prefs.end();
+
+  ok = ok && prefs.begin("net", false);
+  if (ok) ok = prefs.clear();
+  prefs.end();
+
+  server.sendHeader("Cache-Control", "no-cache");
+  server.send(ok ? 200 : 500, "application/json", ok ? "{\"ok\":true}" : "{\"ok\":false}");
+  if (ok) {
+    delay(300);
+    ESP.restart();
+  }
 }
 
 void handleApiStatus() {

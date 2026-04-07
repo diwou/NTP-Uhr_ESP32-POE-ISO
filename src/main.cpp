@@ -211,6 +211,7 @@ void setup() {
   server.on("/update",     HTTP_GET,  handleOTAPage);
   server.on("/update",     HTTP_POST, handleOTAPost, handleOTAUpload);
   server.on("/reboot",     HTTP_POST, handleReboot);
+  server.on("/factory-reset", HTTP_POST, handleFactoryReset);
   server.on("/savenet",    HTTP_POST, handleSaveNet);
   server.onNotFound([]() {
     server.sendHeader("Location", "/");
