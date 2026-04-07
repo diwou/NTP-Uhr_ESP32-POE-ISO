@@ -23,6 +23,9 @@ einer späteren Verifikation undatiert, statt ein Datum zu raten.
 - 100-Mbit/s-Full-Duplex-Erzwingung wieder auf den bewährten 1.4.2-Pfad
   zurückgestellt: Beim Ethernet-Start wird ausschließlich `BMCR=0x2100`
   geschrieben; bei Link-Up wird der ausgehandelte Link nur diagnostiziert.
+- Ethernet-PHY wird vor `ETH.begin()` kurz per GPIO12 zurückgesetzt bzw.
+  stromlos geschaltet, damit ein normaler ESP-Neustart hängende 10M-Link-Zustände
+  ähnlich zuverlässig auflöst wie ein manuelles Stromlosmachen.
 - Alle relevanten Konfigurationsstrings werden jetzt sicher begrenzt kopiert;
   fehlende Nullterminierung durch `strncpy` ist damit beseitigt.
 - Web-UI gegen HTML-Injection durch Konfigurationswerte gehärtet:
