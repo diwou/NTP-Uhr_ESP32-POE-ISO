@@ -147,20 +147,37 @@ void setup() {
   copyTrunc(g_static_sn,  ssn.c_str());
   copyTrunc(g_static_dns, sdns.c_str());
 
-  // 100 Mbit/s erzwingen: PHY-Register BMCR (Reg 0) direkt per MDIO beschreiben.
-  // Der Schreibvorgang wird beim Start und erneut nach Link-Up ausgeführt,
-  // weil der PHY den Zustand beim Verbindungsaufbau neu aushandeln kann.
-  // Wert 0x2100: Bit 13 = 100 Mbit/s, Bit 8 = Full-Duplex, Bit 12 = AN-aus.
+  // 100 Mbit/s Full-Duplex bevorzugen: Autonegotiation bleibt aktiv, aber der
+  // PHY bietet nur 100Base-TX Full-Duplex an. Das vermeidet Duplex-Mismatch mit
+  // Switches, die selbst Autonegotiation nutzen.
   auto forceEth100Handler = [](void*, esp_event_base_t, int32_t event_id, void* data) {
+      static uint8_t connected_retries = 0;
       const char *phase = (event_id == ETHERNET_EVENT_CONNECTED) ? "ETH_CONNECTED" : "ETH_START";
       if (!data) {
-        forceEth100FullDuplex(nullptr, phase);
+        configureEth100FullDuplex(nullptr, phase);
         Serial.printf("[ETH] 100-Mbit-Erzwingung fehlgeschlagen: %s\n", g_eth_force_status);
         return;
       }
+
+      if (event_id == ETHERNET_EVENT_CONNECTED && ETH.linkSpeed() == 100 && ETH.fullDuplex()) {
+        snprintf(g_eth_force_status, sizeof(g_eth_force_status),
+                 "%s: Link 100M Full OK", phase);
+        return;
+      }
+
+      if (event_id == ETHERNET_EVENT_CONNECTED && connected_retries >= 2) {
+        snprintf(g_eth_force_status, sizeof(g_eth_force_status),
+                 "%s: bleibt %uM %s", phase, (unsigned)ETH.linkSpeed(),
+                 ETH.fullDuplex() ? "Full" : "Half");
+        return;
+      }
+
+      if (event_id == ETHERNET_EVENT_START) connected_retries = 0;
+      if (event_id == ETHERNET_EVENT_CONNECTED) connected_retries++;
+
       esp_eth_handle_t    h   = *(esp_eth_handle_t*)data;
-      if (forceEth100FullDuplex(h, phase)) {
-        Serial.println("[ETH] BMCR=0x2100: 100 Mbit/s Full-Duplex erzwungen");
+      if (configureEth100FullDuplex(h, phase)) {
+        Serial.printf("[ETH] 100M Full via Autoneg konfiguriert: %s\n", g_eth_force_status);
       } else {
         Serial.printf("[ETH] 100-Mbit-Erzwingung fehlgeschlagen: %s\n", g_eth_force_status);
       }

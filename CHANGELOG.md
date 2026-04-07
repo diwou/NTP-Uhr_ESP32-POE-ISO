@@ -20,10 +20,11 @@ einer späteren Verifikation undatiert, statt ein Datum zu raten.
   manuelle NTP-Pfad nutzt weiter `WiFi.hostByName()` wie im stabilen 1.4.4-Stand.
 
 ### Behoben
-- 100-Mbit/s-Full-Duplex-Erzwingung robuster gemacht: BMCR `0x2100` wird nicht
-  nur beim Ethernet-Start, sondern zusätzlich bei Link-Up gesetzt, damit der
-  PHY den Wert nach der Aushandlung nicht wieder auf 10 Mbit/s zurückfallen
-  lässt.
+- 100-Mbit/s-Full-Duplex-Konfiguration auf autonegotiation-kompatiblen Weg
+  umgestellt: Der PHY bewirbt nur noch 100Base-TX Full-Duplex (`ANAR=0x0101`)
+  und startet Autonegotiation neu (`BMCR=0x1200`), statt die lokale Seite
+  hart ohne Autonegotiation auf `BMCR=0x2100` zu setzen; Link-Up-Nachversuche
+  sind begrenzt, damit bei hartnäckigen 10-Mbit-Links keine Link-Schleife entsteht.
 - Alle relevanten Konfigurationsstrings werden jetzt sicher begrenzt kopiert;
   fehlende Nullterminierung durch `strncpy` ist damit beseitigt.
 - Web-UI gegen HTML-Injection durch Konfigurationswerte gehärtet:
