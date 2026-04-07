@@ -176,6 +176,14 @@ void setup() {
   esp_event_handler_register(ETH_EVENT, ETHERNET_EVENT_START, forceEth100Handler, nullptr);
   esp_event_handler_register(ETH_EVENT, ETHERNET_EVENT_CONNECTED, forceEth100Handler, nullptr);
 
+  // Der Olimex ETH_PHY_POWER-Pin (GPIO12) schaltet den Ethernet-PHY. Ein kurzer
+  // PHY-Power-Cycle vor ETH.begin() verhindert 10M-Links nach Soft-Neustarts.
+  pinMode(ETH_POWER_PIN, OUTPUT);
+  digitalWrite(ETH_POWER_PIN, LOW);
+  delay(250);
+  digitalWrite(ETH_POWER_PIN, HIGH);
+  delay(250);
+
   // Ethernet (statische IP vor begin() konfigurieren, falls gewünscht)
   WiFi.onEvent(WiFiEvent);
   if (!g_use_dhcp) {
