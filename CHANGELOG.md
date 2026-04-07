@@ -19,8 +19,8 @@ einer späteren Verifikation undatiert, statt ein Datum zu raten.
 ### Geändert
 - Build-Konfiguration explizit auf die offizielle `default_16MB.csv`
   Partitionstabelle für das Olimex ESP32-POE-ISO-16MB-Board gestellt.
-- Upload-Konfiguration für Recovery-Builds auf den seriellen Port
-  `/dev/ttyACM0` gestellt; ESPOTA bleibt auskommentiert in `platformio.ini`
+- Upload-Konfiguration für Recovery-Builds auf den erkannten seriellen Port
+  `/dev/ttyUSB0` gestellt; ESPOTA bleibt auskommentiert in `platformio.ini`
   erhalten.
 
 ## 1.4.4
