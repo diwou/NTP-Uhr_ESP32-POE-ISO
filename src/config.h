@@ -141,7 +141,7 @@ static void setNtpStatus(const char *status) {
   copyTrunc(g_last_ntp_status, status);
 }
 
-static bool configureEth100FullDuplex(esp_eth_handle_t handle, const char *phase) {
+static bool forceEth100FullDuplex(esp_eth_handle_t handle, const char *phase) {
   if (!handle) {
     snprintf(g_eth_force_status, sizeof(g_eth_force_status),
              "%s: kein Ethernet-Handle", phase ? phase : "ETH");
@@ -149,26 +149,16 @@ static bool configureEth100FullDuplex(esp_eth_handle_t handle, const char *phase
   }
 
   esp_eth_mediator_t *med = (esp_eth_mediator_t*)handle;
-  if (!med || !med->phy_reg_write || !med->phy_reg_read) {
+  if (!med || !med->phy_reg_write) {
     snprintf(g_eth_force_status, sizeof(g_eth_force_status),
              "%s: kein MDIO-Zugriff", phase ? phase : "ETH");
     return false;
   }
 
-  // ANAR 0x0101: IEEE 802.3 selector + nur 100Base-TX Full-Duplex anbieten.
-  // BMCR 0x1200: Autonegotiation aktivieren und neu starten.
-  esp_err_t err_anar = med->phy_reg_write(med, ETH_ADDR, 4 /*ANAR*/, 0x0101);
-  esp_err_t err_bmcr = med->phy_reg_write(med, ETH_ADDR, 0 /*BMCR*/, 0x1200);
-  uint32_t anar = 0;
-  uint32_t bmcr = 0;
-  esp_err_t rd_anar = med->phy_reg_read(med, ETH_ADDR, 4 /*ANAR*/, &anar);
-  esp_err_t rd_bmcr = med->phy_reg_read(med, ETH_ADDR, 0 /*BMCR*/, &bmcr);
+  esp_err_t err = med->phy_reg_write(med, ETH_ADDR, 0 /*BMCR*/, 0x2100);
   snprintf(g_eth_force_status, sizeof(g_eth_force_status),
-           "%s: ANAR=0x%04lx BMCR=0x%04lx %s", phase ? phase : "ETH",
-           (unsigned long)(rd_anar == ESP_OK ? anar : 0),
-           (unsigned long)(rd_bmcr == ESP_OK ? bmcr : 0),
-           (err_anar == ESP_OK && err_bmcr == ESP_OK) ? "OK" : "FEHLER");
-  return err_anar == ESP_OK && err_bmcr == ESP_OK;
+           "%s: BMCR=0x2100 %s", phase ? phase : "ETH", err == ESP_OK ? "OK" : "FEHLER");
+  return err == ESP_OK;
 }
 
 // ---------- NTP-Paket ----------

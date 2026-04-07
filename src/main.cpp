@@ -147,9 +147,10 @@ void setup() {
   copyTrunc(g_static_sn,  ssn.c_str());
   copyTrunc(g_static_dns, sdns.c_str());
 
-  // 100 Mbit/s Full-Duplex beim Start bevorzugen: Autonegotiation bleibt aktiv,
-  // aber der PHY bietet nur 100Base-TX Full-Duplex an. Bei Link-Up wird nur
-  // diagnostiziert, damit wir kein Link-Flapping durch Neustarts der Aushandlung erzeugen.
+  // 100 Mbit/s erzwingen: PHY-Register BMCR (Reg 0) direkt per MDIO beschreiben.
+  // Entspricht dem bewährten 1.4.2-Pfad: nur beim Ethernet-Start schreiben,
+  // danach den ausgehandelten Link nur noch diagnostizieren.
+  // Wert 0x2100: Bit 13 = 100 Mbit/s, Bit 8 = Full-Duplex, Bit 12 = AN-aus.
   auto forceEth100Handler = [](void*, esp_event_base_t, int32_t event_id, void* data) {
       const char *phase = (event_id == ETHERNET_EVENT_CONNECTED) ? "ETH_CONNECTED" : "ETH_START";
       if (event_id == ETHERNET_EVENT_CONNECTED) {
@@ -160,16 +161,16 @@ void setup() {
       }
 
       if (!data) {
-        configureEth100FullDuplex(nullptr, phase);
-        Serial.printf("[ETH] 100-Mbit-Konfiguration fehlgeschlagen: %s\n", g_eth_force_status);
+        forceEth100FullDuplex(nullptr, phase);
+        Serial.printf("[ETH] 100-Mbit-Erzwingung fehlgeschlagen: %s\n", g_eth_force_status);
         return;
       }
 
       esp_eth_handle_t    h   = *(esp_eth_handle_t*)data;
-      if (configureEth100FullDuplex(h, phase)) {
-        Serial.printf("[ETH] 100M Full via Autoneg konfiguriert: %s\n", g_eth_force_status);
+      if (forceEth100FullDuplex(h, phase)) {
+        Serial.printf("[ETH] BMCR=0x2100: 100 Mbit/s Full-Duplex erzwungen (%s)\n", phase);
       } else {
-        Serial.printf("[ETH] 100-Mbit-Konfiguration fehlgeschlagen: %s\n", g_eth_force_status);
+        Serial.printf("[ETH] 100-Mbit-Erzwingung fehlgeschlagen: %s\n", g_eth_force_status);
       }
     };
   esp_event_handler_register(ETH_EVENT, ETHERNET_EVENT_START, forceEth100Handler, nullptr);
