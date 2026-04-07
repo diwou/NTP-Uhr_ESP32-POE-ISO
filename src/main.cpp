@@ -2,7 +2,7 @@
  * ESP32-POE-ISO NTP-Uhr (ST7920 128x64) – Web-UI + Stratum/RTT/Stabilität
  * Erweiterung: VEML7700 Umgebungslicht -> PWM Backlight (heller Umgebung = heller Display)
  *
- * Aktuelle Version: 1.4.4 – Changelog: siehe CHANGELOG.md
+ * Aktuelle Version: 1.4.6 – Changelog: siehe CHANGELOG.md
  *
  * Verdrahtung (zusätzlich zum bestehenden Display):
  *   VEML7700  VIN  -> 3V3  (empfohlen, auch wenn Modul 3-5V kann)
@@ -40,6 +40,7 @@
 #include <Adafruit_VEML7700.h>
 #include <ArduinoOTA.h>
 #include <Update.h>
+#include <esp_system.h>
 #include <esp_eth.h>          // esp_eth_mediator_t, ETHERNET_EVENT_START
 
 #include "config.h"     // Schicht 0: Konstanten, Globals, NTP-/Backlight-Logik, Utils
@@ -88,6 +89,8 @@ static void ntpTask(void *) {
 void setup() {
   Serial.begin(115200);
   delay(50);
+  captureResetReason();
+  Serial.printf("[BOOT] Reset-Grund: %s\n", g_last_reset_reason);
 
   // PWM Backlight init (ESP32-Core 3.x kompatibel)
   pinMode(BL_PIN, OUTPUT);
@@ -125,9 +128,9 @@ void setup() {
   uint32_t iv     = prefs.getULong("iv", 60 * 1000UL);
   uint8_t  anim_m = prefs.getUChar("anim", 0);
   prefs.end();
-  strncpy(ntp1, s1.c_str(), sizeof(ntp1));
-  strncpy(ntp2, s2.c_str(), sizeof(ntp2));
-  strncpy(ntp3, s3.c_str(), sizeof(ntp3));
+  copyTrunc(ntp1, s1.c_str());
+  copyTrunc(ntp2, s2.c_str());
+  copyTrunc(ntp3, s3.c_str());
   ntp_interval_ms = iv ? iv : 60 * 1000UL;
   g_anim_mode = (AnimMode)constrain((int)anim_m, 0, 2);
 
@@ -139,10 +142,10 @@ void setup() {
   String ssn  = prefs.getString("sn",  "255.255.255.0");
   String sdns = prefs.getString("dns", "8.8.8.8");
   prefs.end();
-  strncpy(g_static_ip,  sip.c_str(),  sizeof(g_static_ip));
-  strncpy(g_static_gw,  sgw.c_str(),  sizeof(g_static_gw));
-  strncpy(g_static_sn,  ssn.c_str(),  sizeof(g_static_sn));
-  strncpy(g_static_dns, sdns.c_str(), sizeof(g_static_dns));
+  copyTrunc(g_static_ip,  sip.c_str());
+  copyTrunc(g_static_gw,  sgw.c_str());
+  copyTrunc(g_static_sn,  ssn.c_str());
+  copyTrunc(g_static_dns, sdns.c_str());
 
   // 100 Mbit/s erzwingen: PHY-Register BMCR (Reg 0) direkt per MDIO beschreiben.
   // ESP-IDF 4.4 kennt noch kein ETH_CMD_S_SPEED; stattdessen wird der interne
@@ -179,7 +182,7 @@ void setup() {
     u8g2.sendBuffer();
   });
   ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
-    int pct = progress / (total / 100);
+    int pct = total ? (int)((progress * 100U) / total) : 0;
     char buf[8]; snprintf(buf, sizeof(buf), "%d%%", pct);
     u8g2.clearBuffer();
     drawCenteredY(20, "Arduino OTA", u8g2_font_8x13B_tf);

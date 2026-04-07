@@ -3,8 +3,8 @@
 // ---------- Firmware-Version ----------
 #define FW_MAJOR       1
 #define FW_MINOR       4
-#define FW_PATCH       5
-#define FW_VERSION_STR "1.4.5"
+#define FW_PATCH       6
+#define FW_VERSION_STR "1.4.6"
 
 // ---------- Ethernet ----------
 // Board: Olimex ESP32-POE-ISO – PHY: LAN8710A (LAN8720-kompatibel)
@@ -71,9 +71,11 @@ volatile bool   have_synced = false;
 
 volatile uint8_t g_stratum = 0;
 volatile float   g_rtt_ms  = NAN;  // float = 32-bit, atomar auf ESP32
+char g_last_ntp_status[80] = "noch keine NTP-Abfrage";
 
 bool veml_ok  = false;
 bool ota_ready = false;
+char g_last_reset_reason[48] = "unbekannt";
 
 UiState       ui_state   = UI_BOOT;
 unsigned long ui_since   = 0;
@@ -103,6 +105,41 @@ static uint8_t pwm_target_global = BL_MAX;
 
 static TaskHandle_t ntp_task_handle = nullptr;
 
+template <size_t N>
+static inline void copyTrunc(char (&dst)[N], const char *src) {
+  if (!src) {
+    dst[0] = '\0';
+    return;
+  }
+  snprintf(dst, N, "%s", src);
+}
+
+static const char *resetReasonName(esp_reset_reason_t reason) {
+  switch (reason) {
+    case ESP_RST_POWERON:   return "POWERON";
+    case ESP_RST_EXT:       return "EXT";
+    case ESP_RST_SW:        return "SW";
+    case ESP_RST_PANIC:     return "PANIC";
+    case ESP_RST_INT_WDT:   return "INT_WDT";
+    case ESP_RST_TASK_WDT:  return "TASK_WDT";
+    case ESP_RST_WDT:       return "WDT";
+    case ESP_RST_DEEPSLEEP: return "DEEPSLEEP";
+    case ESP_RST_BROWNOUT:  return "BROWNOUT";
+    case ESP_RST_SDIO:      return "SDIO";
+    default:                return "UNKNOWN";
+  }
+}
+
+static void captureResetReason() {
+  esp_reset_reason_t reason = esp_reset_reason();
+  snprintf(g_last_reset_reason, sizeof(g_last_reset_reason), "%s (%d)",
+           resetReasonName(reason), (int)reason);
+}
+
+static void setNtpStatus(const char *status) {
+  copyTrunc(g_last_ntp_status, status);
+}
+
 // ---------- NTP-Paket ----------
 #pragma pack(push,1)
 struct NtpPacket {
@@ -129,9 +166,9 @@ void normalizeNTP() {
     while (n > 0 && isspace((unsigned char)s[n-1])) s[--n] = '\0';
   };
   trim_inplace(ntp1); trim_inplace(ntp2); trim_inplace(ntp3);
-  if (ntp1[0] == '\0') strncpy(ntp1, "0.de.pool.ntp.org", sizeof(ntp1));
-  if (ntp2[0] == '\0') strncpy(ntp2, ntp1, sizeof(ntp2));
-  if (ntp3[0] == '\0') strncpy(ntp3, ntp1, sizeof(ntp3));
+  if (ntp1[0] == '\0') copyTrunc(ntp1, "0.de.pool.ntp.org");
+  if (ntp2[0] == '\0') copyTrunc(ntp2, ntp1);
+  if (ntp3[0] == '\0') copyTrunc(ntp3, ntp1);
   if (ntp_interval_ms < 1000UL) ntp_interval_ms = 60 * 1000UL;
 }
 
@@ -169,8 +206,22 @@ bool resolveHost(const char *host, IPAddress &out) {
 }
 
 bool ntpQueryOnce(const char *host, uint8_t &outStratum, double &outRTTms) {
-  IPAddress ip; if (!resolveHost(host, ip)) return false;
-  int sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP); if (sock < 0) return false;
+  char status[80];
+  snprintf(status, sizeof(status), "frage %s ab", host);
+  setNtpStatus(status);
+
+  IPAddress ip;
+  if (!resolveHost(host, ip)) {
+    snprintf(status, sizeof(status), "DNS fehlgeschlagen via WiFi.hostByName: %s", host);
+    setNtpStatus(status);
+    return false;
+  }
+
+  int sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+  if (sock < 0) {
+    setNtpStatus("Socket konnte nicht geoeffnet werden");
+    return false;
+  }
   sockaddr_in addr{}; addr.sin_family = AF_INET; addr.sin_port = htons(123);
   addr.sin_addr.s_addr = (uint32_t)ip;
   timeval tv{1, 200000}; setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
@@ -181,16 +232,29 @@ bool ntpQueryOnce(const char *host, uint8_t &outStratum, double &outRTTms) {
   pkt.txTsSec = bswap32(t1s); pkt.txTsFrac = bswap32(t1f);
   uint32_t t_send_us = micros();
   if (sendto(sock, &pkt, sizeof(pkt), 0, (sockaddr*)&addr, sizeof(addr)) != (int)sizeof(pkt)) {
+    setNtpStatus("Senden an NTP-Server fehlgeschlagen");
     close(sock); return false;
   }
   NtpPacket resp{}; sockaddr_in from{}; socklen_t fl = sizeof(from);
   int recvd = recvfrom(sock, &resp, sizeof(resp), 0, (sockaddr*)&from, &fl);
   uint32_t t_recv_us = micros(); close(sock);
-  if (recvd < (int)sizeof(resp))                        return false;
-  if (from.sin_addr.s_addr != addr.sin_addr.s_addr)     return false;
-  if (bswap32(resp.origTsSec) != t1s)                   return false;
+  if (recvd < (int)sizeof(resp)) {
+    setNtpStatus("Keine NTP-Antwort empfangen");
+    return false;
+  }
+  if (from.sin_addr.s_addr != addr.sin_addr.s_addr) {
+    setNtpStatus("NTP-Antwort von unerwarteter IP");
+    return false;
+  }
+  if (bswap32(resp.origTsSec) != t1s) {
+    setNtpStatus("NTP-Origin-Timestamp passt nicht");
+    return false;
+  }
   outStratum = resp.stratum;
   outRTTms   = (double)(t_recv_us - t_send_us) / 1000.0;
+  snprintf(status, sizeof(status), "OK: %s, RTT %.1f ms, Stratum %u",
+           ip.toString().c_str(), outRTTms, (unsigned)outStratum);
+  setNtpStatus(status);
   return true;
 }
 

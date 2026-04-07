@@ -4,10 +4,49 @@
 //  fmtLocal, fmtUptime, drawCenteredY, u8g2, Update).
 
 // ---------- HTML-Seite (SPA, 3 Tabs) ----------
+static String htmlEscape(const String &input) {
+  String out;
+  out.reserve(input.length() + 16);
+  for (size_t i = 0; i < input.length(); i++) {
+    switch (input[i]) {
+      case '&': out += F("&amp;");  break;
+      case '<': out += F("&lt;");   break;
+      case '>': out += F("&gt;");   break;
+      case '"': out += F("&quot;"); break;
+      case '\'': out += F("&#39;"); break;
+      default: out += input[i];     break;
+    }
+  }
+  return out;
+}
+
+static String jsonEscape(const String &input) {
+  String out;
+  out.reserve(input.length() + 8);
+  for (size_t i = 0; i < input.length(); i++) {
+    char c = input[i];
+    switch (c) {
+      case '\\': out += F("\\\\"); break;
+      case '"':  out += F("\\\""); break;
+      case '\n': out += F("\\n");  break;
+      case '\r': out += F("\\r");  break;
+      case '\t': out += F("\\t");  break;
+      default:
+        if ((uint8_t)c < 0x20) out += ' ';
+        else out += c;
+        break;
+    }
+  }
+  return out;
+}
+
 String htmlPage() {
   String ip    = eth_got_ip ? ETH.localIP().toString() : String("-");
   String mac_s = ETH.macAddress();  // verfügbar nach ETH.begin()
   String link_s = eth_got_ip ? (String((int)ETH.linkSpeed()) + " Mbps") : String("Kein Link");
+  String gw_s = eth_got_ip ? ETH.gatewayIP().toString() : String("-");
+  String dns_s = eth_got_ip ? ETH.dnsIP().toString() : String("-");
+  String netmode_s = g_use_dhcp ? String("DHCP") : String("Statisch");
   String last  = have_synced ? fmtLocal(last_sync) : String("noch nie");
   String rtt_s = isnan(g_rtt_ms) ? String("-") : String((int)lround(g_rtt_ms)) + " ms";
   int sp = stabilityPercent();
@@ -17,6 +56,14 @@ String htmlPage() {
   String uptime = fmtUptime(millis() / 1000UL);
   const char *animNames[] = {"Keine (Normal)", "Vertical Scroll", "Crossfade"};
   String anim_s = animNames[constrain((int)g_anim_mode, 0, 2)];
+  String ntp1Esc = htmlEscape(String(ntp1));
+  String ntp2Esc = htmlEscape(String(ntp2));
+  String ntp3Esc = htmlEscape(String(ntp3));
+  String staticIpEsc = htmlEscape(String(g_static_ip));
+  String staticSnEsc = htmlEscape(String(g_static_sn));
+  String staticGwEsc = htmlEscape(String(g_static_gw));
+  String staticDnsEsc = htmlEscape(String(g_static_dns));
+  String ntpDiagEsc = htmlEscape(String(g_last_ntp_status));
 
   SyncState st = currentSyncState();
   const char *stClass = (st==SYNC_OK?"ok":st==SYNC_SYNCING?"sync":st==SYNC_STALE?"stale":st==SYNC_OFFLINE?"off":"never");
@@ -141,6 +188,26 @@ String htmlPage() {
   html += link_s;
   html +=
         "</div></div>"
+        "<div class='cell'><div class='lbl'>Gateway</div>"
+          "<div class='val sm' id='v-gw'>";
+  html += gw_s;
+  html +=
+        "</div></div>"
+        "<div class='cell'><div class='lbl'>DNS-Server</div>"
+          "<div class='val sm' id='v-dns'>";
+  html += dns_s;
+  html +=
+        "</div></div>"
+        "<div class='cell'><div class='lbl'>Netzwerkmodus</div>"
+          "<div class='val sm' id='v-netmode'>";
+  html += netmode_s;
+  html +=
+        "</div></div>"
+        "<div class='cell'><div class='lbl'>Konfig. DNS</div>"
+          "<div class='val sm' id='v-conf-dns'>";
+  html += staticDnsEsc;
+  html +=
+        "</div></div>"
       "</div>"
     "</div>"
 
@@ -215,17 +282,17 @@ String htmlPage() {
       "<div class='card-hd'>NTP-Server</div>"
       "<div class='field'><label>Server 1</label>"
         "<input name='s1' value='";
-  html += String(ntp1);
+  html += ntp1Esc;
   html +=
         "' placeholder='0.de.pool.ntp.org'></div>"
       "<div class='field'><label>Server 2</label>"
         "<input name='s2' value='";
-  html += String(ntp2);
+  html += ntp2Esc;
   html +=
         "' placeholder='1.de.pool.ntp.org'></div>"
       "<div class='field'><label>Server 3</label>"
         "<input name='s3' value='";
-  html += String(ntp3);
+  html += ntp3Esc;
   html +=
         "' placeholder='2.de.pool.ntp.org'></div>"
       "<div class='field'><label>Abfrageintervall (Minuten)</label>"
@@ -276,22 +343,22 @@ String htmlPage() {
       "<div id='static-fields'>"
         "<div class='field'><label>IP-Adresse</label>"
           "<input name='ip' placeholder='192.168.1.100' value='";
-  html += String(g_static_ip);
+  html += staticIpEsc;
   html +=
         "'></div>"
         "<div class='field'><label>Subnetzmaske</label>"
           "<input name='sn' placeholder='255.255.255.0' value='";
-  html += String(g_static_sn);
+  html += staticSnEsc;
   html +=
         "'></div>"
         "<div class='field'><label>Gateway</label>"
           "<input name='gw' placeholder='192.168.1.1' value='";
-  html += String(g_static_gw);
+  html += staticGwEsc;
   html +=
         "'></div>"
         "<div class='field'><label>DNS-Server</label>"
           "<input name='dns' placeholder='8.8.8.8' value='";
-  html += String(g_static_dns);
+  html += staticDnsEsc;
   html +=
         "'></div>"
       "</div>"
@@ -315,6 +382,22 @@ String htmlPage() {
           "<div class='val'>" FW_VERSION_STR "</div></div>"
         "<div class='cell wide'><div class='lbl'>Hostname</div>"
           "<div class='val sm'>esp32-ntp-uhr</div></div>"
+      "</div>"
+    "</div>"
+
+    "<div class='card'>"
+      "<div class='card-hd'>Systemdiagnose</div>"
+      "<div class='grid'>"
+        "<div class='cell wide'><div class='lbl'>Letzter Reset</div>"
+          "<div class='val sm' id='v-reset'>";
+  html += g_last_reset_reason;
+  html +=
+        "</div></div>"
+        "<div class='cell wide'><div class='lbl'>NTP-Diagnose</div>"
+          "<div class='val sm' id='v-ntpdiag'>";
+  html += ntpDiagEsc;
+  html +=
+        "</div></div>"
       "</div>"
     "</div>"
 
@@ -475,6 +558,10 @@ String htmlPage() {
           "e('v-ip').textContent=d.ip;"
           "e('v-mac').textContent=d.mac||'-';"
           "e('v-link').textContent=d.link_mbps>0?d.link_mbps+' Mbps':'Kein Link';"
+          "e('v-gw').textContent=d.gateway||'-';"
+          "e('v-dns').textContent=d.dns||'-';"
+          "e('v-netmode').textContent=d.netmode||'-';"
+          "e('v-conf-dns').textContent=d.config_dns||'-';"
           "e('v-str').textContent=d.stratum;"
           "e('v-rtt').textContent=d.rtt_ms>=0?d.rtt_ms+' ms':'-';"
           "e('v-stab').textContent=d.stability_pct>=0?d.stability_pct+' %':'-';"
@@ -484,6 +571,8 @@ String htmlPage() {
           "e('v-bl').textContent=d.backlight_pct+' %';"
           "e('v-up').textContent=fmt(d.uptime_s);"
           "e('v-anim').textContent=animN[d.anim]||'-';"
+          "e('v-reset').textContent=d.reset||'-';"
+          "e('v-ntpdiag').textContent=d.ntp_diag||'-';"
           "var b=e('sync-badge');"
           "var lbl={ok:'Synchron',sync:'Syncing ...',stale:'Stale',off:'Offline',never:'Nie sync.'};"
           "b.textContent=lbl[d.sync_state]||d.sync_state;"
@@ -501,13 +590,16 @@ String htmlPage() {
 }
 
 // ---------- Web-Handler ----------
-void handleRoot() { server.send(200, "text/html; charset=utf-8", htmlPage()); }
+void handleRoot() {
+  server.sendHeader("Cache-Control", "no-store");
+  server.send(200, "text/html; charset=utf-8", htmlPage());
+}
 
 void handleSave() {
   auto norm = [](String s) -> String { s.trim(); return s; };
-  if (server.hasArg("s1")) strncpy(ntp1, norm(server.arg("s1")).c_str(), sizeof(ntp1));
-  if (server.hasArg("s2")) strncpy(ntp2, norm(server.arg("s2")).c_str(), sizeof(ntp2));
-  if (server.hasArg("s3")) strncpy(ntp3, norm(server.arg("s3")).c_str(), sizeof(ntp3));
+  if (server.hasArg("s1")) copyTrunc(ntp1, norm(server.arg("s1")).c_str());
+  if (server.hasArg("s2")) copyTrunc(ntp2, norm(server.arg("s2")).c_str());
+  if (server.hasArg("s3")) copyTrunc(ntp3, norm(server.arg("s3")).c_str());
   if (server.hasArg("iv")) {
     long m = server.arg("iv").toInt();
     ntp_interval_ms = (uint32_t)constrain(m, 1, 1440) * 60UL * 1000UL;
@@ -563,16 +655,28 @@ void handleApiStatus() {
   int sp = stabilityPercent();
   String lastStr = have_synced ? fmtLocal(last_sync) : String("noch nie");
   String mac_s = ETH.macAddress();
-  char json[700];
+  String ip_s = eth_got_ip ? ETH.localIP().toString() : String("-");
+  String gw_s = eth_got_ip ? ETH.gatewayIP().toString() : String("-");
+  String dns_s = eth_got_ip ? ETH.dnsIP().toString() : String("-");
+  String config_dns_json = jsonEscape(String(g_static_dns));
+  String reset_json = jsonEscape(String(g_last_reset_reason));
+  String ntp_diag_json = jsonEscape(String(g_last_ntp_status));
+  char json[1150];
   snprintf(json, sizeof(json),
     "{\"ip\":\"%s\",\"mac\":\"%s\",\"link_mbps\":%d,"
+    "\"gateway\":\"%s\",\"dns\":\"%s\",\"netmode\":\"%s\",\"config_dns\":\"%s\","
     "\"sync_state\":\"%s\",\"stratum\":%u,"
     "\"rtt_ms\":%d,\"stability_pct\":%d,\"interval_min\":%lu,"
     "\"last_sync\":\"%s\",\"lux\":%.1f,\"backlight_pct\":%d,"
-    "\"uptime_s\":%lu,\"anim\":%d,\"fw\":\"%s\"}",
-    eth_got_ip ? ETH.localIP().toString().c_str() : "-",
+    "\"uptime_s\":%lu,\"anim\":%d,\"fw\":\"%s\","
+    "\"reset\":\"%s\",\"ntp_diag\":\"%s\"}",
+    ip_s.c_str(),
     mac_s.c_str(),
     eth_got_ip ? (int)ETH.linkSpeed() : 0,
+    gw_s.c_str(),
+    dns_s.c_str(),
+    g_use_dhcp ? "DHCP" : "Statisch",
+    config_dns_json.c_str(),
     stStr, (unsigned)g_stratum,
     isnan(g_rtt_ms) ? -1 : (int)lround(g_rtt_ms), sp,
     (unsigned long)(ntp_interval_ms / 60000),
@@ -581,17 +685,19 @@ void handleApiStatus() {
     (int)((pwm_current * 100) / 255),
     millis() / 1000UL,
     (int)g_anim_mode,
-    FW_VERSION_STR);
+    FW_VERSION_STR,
+    reset_json.c_str(),
+    ntp_diag_json.c_str());
   server.sendHeader("Cache-Control", "no-cache");
   server.send(200, "application/json", json);
 }
 
 void handleSaveNet() {
   g_use_dhcp = !server.hasArg("netmode") || server.arg("netmode") == "1";
-  if (server.hasArg("ip"))  strncpy(g_static_ip,  server.arg("ip").c_str(),  sizeof(g_static_ip));
-  if (server.hasArg("gw"))  strncpy(g_static_gw,  server.arg("gw").c_str(),  sizeof(g_static_gw));
-  if (server.hasArg("sn"))  strncpy(g_static_sn,  server.arg("sn").c_str(),  sizeof(g_static_sn));
-  if (server.hasArg("dns")) strncpy(g_static_dns, server.arg("dns").c_str(), sizeof(g_static_dns));
+  if (server.hasArg("ip"))  copyTrunc(g_static_ip,  server.arg("ip").c_str());
+  if (server.hasArg("gw"))  copyTrunc(g_static_gw,  server.arg("gw").c_str());
+  if (server.hasArg("sn"))  copyTrunc(g_static_sn,  server.arg("sn").c_str());
+  if (server.hasArg("dns")) copyTrunc(g_static_dns, server.arg("dns").c_str());
   prefs.begin("net", false);
   prefs.putBool("dhcp", g_use_dhcp);
   prefs.putString("ip",  g_static_ip);

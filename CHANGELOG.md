@@ -10,6 +10,30 @@ einer späteren Verifikation undatiert, statt ein Datum zu raten.
 
 ## [Unreleased]
 
+## 1.4.6 - 2026-04-07
+### Neu
+- Reset-Grund wird beim Boot seriell ausgegeben und im System-Tab der Web-UI
+  angezeigt, um spontane Neustarts ohne serielle Verbindung besser einzugrenzen.
+- Status-Tab zeigt Gateway, DNS-Server, Netzwerkmodus und konfigurierten DNS,
+  damit DNS-Probleme bei lokalen Hostnamen per Webinterface sichtbar sind.
+- NTP-Diagnose wird im System-Tab und per `/api/status` ausgegeben; der
+  manuelle NTP-Pfad nutzt weiter `WiFi.hostByName()` wie im stabilen 1.4.4-Stand.
+
+### Behoben
+- Alle relevanten Konfigurationsstrings werden jetzt sicher begrenzt kopiert;
+  fehlende Nullterminierung durch `strncpy` ist damit beseitigt.
+- Web-UI gegen HTML-Injection durch Konfigurationswerte gehärtet:
+  NTP-Server- und Netzwerkfelder werden vor der HTML-Ausgabe escaped.
+- ArduinoOTA-Fortschrittsberechnung robuster gemacht (`progress * 100 / total`
+  statt Division über `total / 100`).
+- Die Hauptseite der Web-UI wird mit `Cache-Control: no-store` ausgeliefert,
+  damit nach OTA-Updates keine alte HTML-Version im Browser hängen bleibt.
+
+### Geändert
+- OTA-Upload über Netzwerk ist wieder als aktiver Upload-Pfad in
+  `platformio.ini` eingestellt; der USB-Recovery-Port bleibt auskommentiert
+  dokumentiert.
+
 ## 1.4.5 - 2026-04-07
 ### Neu
 - Recovery-Funktion im System-Tab ergänzt: Die Web-UI kann die persistenten
