@@ -76,6 +76,7 @@ char g_last_ntp_status[80] = "noch keine NTP-Abfrage";
 bool veml_ok  = false;
 bool ota_ready = false;
 char g_last_reset_reason[48] = "unbekannt";
+char g_eth_force_status[80] = "noch nicht gesetzt";
 
 UiState       ui_state   = UI_BOOT;
 unsigned long ui_since   = 0;
@@ -138,6 +139,26 @@ static void captureResetReason() {
 
 static void setNtpStatus(const char *status) {
   copyTrunc(g_last_ntp_status, status);
+}
+
+static bool forceEth100FullDuplex(esp_eth_handle_t handle, const char *phase) {
+  if (!handle) {
+    snprintf(g_eth_force_status, sizeof(g_eth_force_status),
+             "%s: kein Ethernet-Handle", phase ? phase : "ETH");
+    return false;
+  }
+
+  esp_eth_mediator_t *med = (esp_eth_mediator_t*)handle;
+  if (!med || !med->phy_reg_write) {
+    snprintf(g_eth_force_status, sizeof(g_eth_force_status),
+             "%s: kein MDIO-Zugriff", phase ? phase : "ETH");
+    return false;
+  }
+
+  esp_err_t err = med->phy_reg_write(med, ETH_ADDR, 0 /*BMCR*/, 0x2100);
+  snprintf(g_eth_force_status, sizeof(g_eth_force_status),
+           "%s: BMCR=0x2100 %s", phase ? phase : "ETH", err == ESP_OK ? "OK" : "FEHLER");
+  return err == ESP_OK;
 }
 
 // ---------- NTP-Paket ----------

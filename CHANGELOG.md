@@ -20,6 +20,10 @@ einer späteren Verifikation undatiert, statt ein Datum zu raten.
   manuelle NTP-Pfad nutzt weiter `WiFi.hostByName()` wie im stabilen 1.4.4-Stand.
 
 ### Behoben
+- 100-Mbit/s-Full-Duplex-Erzwingung robuster gemacht: BMCR `0x2100` wird nicht
+  nur beim Ethernet-Start, sondern zusätzlich bei Link-Up gesetzt, damit der
+  PHY den Wert nach der Aushandlung nicht wieder auf 10 Mbit/s zurückfallen
+  lässt.
 - Alle relevanten Konfigurationsstrings werden jetzt sicher begrenzt kopiert;
   fehlende Nullterminierung durch `strncpy` ist damit beseitigt.
 - Web-UI gegen HTML-Injection durch Konfigurationswerte gehärtet:
@@ -30,6 +34,9 @@ einer späteren Verifikation undatiert, statt ein Datum zu raten.
   damit nach OTA-Updates keine alte HTML-Version im Browser hängen bleibt.
 
 ### Geändert
+- Ethernet-Diagnose im Webinterface erweitert: Link-Speed, Duplex und letzter
+  100-Mbit-Erzwingungsstatus sind per Status/System-Ansicht und `/api/status`
+  sichtbar.
 - OTA-Upload über Netzwerk ist wieder als aktiver Upload-Pfad in
   `platformio.ini` eingestellt; der USB-Recovery-Port bleibt auskommentiert
   dokumentiert.

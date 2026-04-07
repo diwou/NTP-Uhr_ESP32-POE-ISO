@@ -44,6 +44,7 @@ String htmlPage() {
   String ip    = eth_got_ip ? ETH.localIP().toString() : String("-");
   String mac_s = ETH.macAddress();  // verfügbar nach ETH.begin()
   String link_s = eth_got_ip ? (String((int)ETH.linkSpeed()) + " Mbps") : String("Kein Link");
+  String duplex_s = eth_got_ip ? (ETH.fullDuplex() ? String("Full") : String("Half")) : String("-");
   String gw_s = eth_got_ip ? ETH.gatewayIP().toString() : String("-");
   String dns_s = eth_got_ip ? ETH.dnsIP().toString() : String("-");
   String netmode_s = g_use_dhcp ? String("DHCP") : String("Statisch");
@@ -64,6 +65,7 @@ String htmlPage() {
   String staticGwEsc = htmlEscape(String(g_static_gw));
   String staticDnsEsc = htmlEscape(String(g_static_dns));
   String ntpDiagEsc = htmlEscape(String(g_last_ntp_status));
+  String ethForceEsc = htmlEscape(String(g_eth_force_status));
 
   SyncState st = currentSyncState();
   const char *stClass = (st==SYNC_OK?"ok":st==SYNC_SYNCING?"sync":st==SYNC_STALE?"stale":st==SYNC_OFFLINE?"off":"never");
@@ -186,6 +188,11 @@ String htmlPage() {
         "<div class='cell'><div class='lbl'>Link</div>"
           "<div class='val sm' id='v-link'>";
   html += link_s;
+  html +=
+        "</div></div>"
+        "<div class='cell'><div class='lbl'>Duplex</div>"
+          "<div class='val sm' id='v-duplex'>";
+  html += duplex_s;
   html +=
         "</div></div>"
         "<div class='cell'><div class='lbl'>Gateway</div>"
@@ -398,6 +405,11 @@ String htmlPage() {
   html += ntpDiagEsc;
   html +=
         "</div></div>"
+        "<div class='cell wide'><div class='lbl'>Ethernet 100M</div>"
+          "<div class='val sm' id='v-ethforce'>";
+  html += ethForceEsc;
+  html +=
+        "</div></div>"
       "</div>"
     "</div>"
 
@@ -558,6 +570,7 @@ String htmlPage() {
           "e('v-ip').textContent=d.ip;"
           "e('v-mac').textContent=d.mac||'-';"
           "e('v-link').textContent=d.link_mbps>0?d.link_mbps+' Mbps':'Kein Link';"
+          "e('v-duplex').textContent=d.full_duplex?'Full':(d.link_mbps>0?'Half':'-');"
           "e('v-gw').textContent=d.gateway||'-';"
           "e('v-dns').textContent=d.dns||'-';"
           "e('v-netmode').textContent=d.netmode||'-';"
@@ -573,6 +586,7 @@ String htmlPage() {
           "e('v-anim').textContent=animN[d.anim]||'-';"
           "e('v-reset').textContent=d.reset||'-';"
           "e('v-ntpdiag').textContent=d.ntp_diag||'-';"
+          "e('v-ethforce').textContent=d.eth_force||'-';"
           "var b=e('sync-badge');"
           "var lbl={ok:'Synchron',sync:'Syncing ...',stale:'Stale',off:'Offline',never:'Nie sync.'};"
           "b.textContent=lbl[d.sync_state]||d.sync_state;"
@@ -661,18 +675,21 @@ void handleApiStatus() {
   String config_dns_json = jsonEscape(String(g_static_dns));
   String reset_json = jsonEscape(String(g_last_reset_reason));
   String ntp_diag_json = jsonEscape(String(g_last_ntp_status));
-  char json[1150];
+  String eth_force_json = jsonEscape(String(g_eth_force_status));
+  char json[1300];
   snprintf(json, sizeof(json),
     "{\"ip\":\"%s\",\"mac\":\"%s\",\"link_mbps\":%d,"
+    "\"full_duplex\":%s,"
     "\"gateway\":\"%s\",\"dns\":\"%s\",\"netmode\":\"%s\",\"config_dns\":\"%s\","
     "\"sync_state\":\"%s\",\"stratum\":%u,"
     "\"rtt_ms\":%d,\"stability_pct\":%d,\"interval_min\":%lu,"
     "\"last_sync\":\"%s\",\"lux\":%.1f,\"backlight_pct\":%d,"
     "\"uptime_s\":%lu,\"anim\":%d,\"fw\":\"%s\","
-    "\"reset\":\"%s\",\"ntp_diag\":\"%s\"}",
+    "\"reset\":\"%s\",\"ntp_diag\":\"%s\",\"eth_force\":\"%s\"}",
     ip_s.c_str(),
     mac_s.c_str(),
     eth_got_ip ? (int)ETH.linkSpeed() : 0,
+    eth_got_ip && ETH.fullDuplex() ? "true" : "false",
     gw_s.c_str(),
     dns_s.c_str(),
     g_use_dhcp ? "DHCP" : "Statisch",
@@ -687,7 +704,8 @@ void handleApiStatus() {
     (int)g_anim_mode,
     FW_VERSION_STR,
     reset_json.c_str(),
-    ntp_diag_json.c_str());
+    ntp_diag_json.c_str(),
+    eth_force_json.c_str());
   server.sendHeader("Cache-Control", "no-cache");
   server.send(200, "application/json", json);
 }

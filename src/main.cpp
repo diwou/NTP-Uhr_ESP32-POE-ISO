@@ -148,18 +148,25 @@ void setup() {
   copyTrunc(g_static_dns, sdns.c_str());
 
   // 100 Mbit/s erzwingen: PHY-Register BMCR (Reg 0) direkt per MDIO beschreiben.
-  // ESP-IDF 4.4 kennt noch kein ETH_CMD_S_SPEED; stattdessen wird der interne
-  // esp_eth_mediator_t genutzt (erstes Member von esp_eth_driver_t → Cast gültig).
+  // Der Schreibvorgang wird beim Start und erneut nach Link-Up ausgeführt,
+  // weil der PHY den Zustand beim Verbindungsaufbau neu aushandeln kann.
   // Wert 0x2100: Bit 13 = 100 Mbit/s, Bit 8 = Full-Duplex, Bit 12 = AN-aus.
-  esp_event_handler_register(ETH_EVENT, ETHERNET_EVENT_START,
-    [](void*, esp_event_base_t, int32_t, void* data) {
-      esp_eth_handle_t    h   = *(esp_eth_handle_t*)data;
-      esp_eth_mediator_t *med = (esp_eth_mediator_t*)h;
-      if (med && med->phy_reg_write) {
-        med->phy_reg_write(med, ETH_ADDR, 0 /*BMCR*/, 0x2100);
-        Serial.println("[ETH] BMCR=0x2100: 100 Mbit/s Full-Duplex erzwungen");
+  auto forceEth100Handler = [](void*, esp_event_base_t, int32_t event_id, void* data) {
+      const char *phase = (event_id == ETHERNET_EVENT_CONNECTED) ? "ETH_CONNECTED" : "ETH_START";
+      if (!data) {
+        forceEth100FullDuplex(nullptr, phase);
+        Serial.printf("[ETH] 100-Mbit-Erzwingung fehlgeschlagen: %s\n", g_eth_force_status);
+        return;
       }
-    }, nullptr);
+      esp_eth_handle_t    h   = *(esp_eth_handle_t*)data;
+      if (forceEth100FullDuplex(h, phase)) {
+        Serial.println("[ETH] BMCR=0x2100: 100 Mbit/s Full-Duplex erzwungen");
+      } else {
+        Serial.printf("[ETH] 100-Mbit-Erzwingung fehlgeschlagen: %s\n", g_eth_force_status);
+      }
+    };
+  esp_event_handler_register(ETH_EVENT, ETHERNET_EVENT_START, forceEth100Handler, nullptr);
+  esp_event_handler_register(ETH_EVENT, ETHERNET_EVENT_CONNECTED, forceEth100Handler, nullptr);
 
   // Ethernet (statische IP vor begin() konfigurieren, falls gewünscht)
   WiFi.onEvent(WiFiEvent);
