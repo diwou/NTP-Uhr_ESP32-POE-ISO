@@ -23,8 +23,9 @@ einer späteren Verifikation undatiert, statt ein Datum zu raten.
 - 100-Mbit/s-Full-Duplex-Konfiguration auf autonegotiation-kompatiblen Weg
   umgestellt: Der PHY bewirbt nur noch 100Base-TX Full-Duplex (`ANAR=0x0101`)
   und startet Autonegotiation neu (`BMCR=0x1200`), statt die lokale Seite
-  hart ohne Autonegotiation auf `BMCR=0x2100` zu setzen; Link-Up-Nachversuche
-  sind begrenzt, damit bei hartnäckigen 10-Mbit-Links keine Link-Schleife entsteht.
+  hart ohne Autonegotiation auf `BMCR=0x2100` zu setzen; bei Link-Up wird nur
+  noch der ausgehandelte Link diagnostiziert, damit keine Link-Neuaushandlung
+  nach erfolgreicher Verbindung ausgelöst wird.
 - Alle relevanten Konfigurationsstrings werden jetzt sicher begrenzt kopiert;
   fehlende Nullterminierung durch `strncpy` ist damit beseitigt.
 - Web-UI gegen HTML-Injection durch Konfigurationswerte gehärtet:
