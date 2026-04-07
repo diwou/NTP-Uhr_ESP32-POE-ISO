@@ -2,9 +2,9 @@
 
 // ---------- Firmware-Version ----------
 #define FW_MAJOR       1
-#define FW_MINOR       4
-#define FW_PATCH       6
-#define FW_VERSION_STR "1.4.6"
+#define FW_MINOR       5
+#define FW_PATCH       0
+#define FW_VERSION_STR "1.5.0"
 
 // ---------- Ethernet ----------
 // Board: Olimex ESP32-POE-ISO – PHY: LAN8710A (LAN8720-kompatibel)

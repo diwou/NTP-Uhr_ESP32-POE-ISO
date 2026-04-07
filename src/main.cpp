@@ -2,7 +2,7 @@
  * ESP32-POE-ISO NTP-Uhr (ST7920 128x64) – Web-UI + Stratum/RTT/Stabilität
  * Erweiterung: VEML7700 Umgebungslicht -> PWM Backlight (heller Umgebung = heller Display)
  *
- * Aktuelle Version: 1.4.6 – Changelog: siehe CHANGELOG.md
+ * Aktuelle Version: 1.5.0 – Changelog: siehe CHANGELOG.md
  *
  * Verdrahtung (zusätzlich zum bestehenden Display):
  *   VEML7700  VIN  -> 3V3  (empfohlen, auch wenn Modul 3-5V kann)

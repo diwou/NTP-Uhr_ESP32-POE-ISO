@@ -10,7 +10,7 @@ einer späteren Verifikation undatiert, statt ein Datum zu raten.
 
 ## [Unreleased]
 
-## 1.4.6 - 2026-04-07
+## 1.5.0 - 2026-04-07
 ### Neu
 - Reset-Grund wird beim Boot seriell ausgegeben und im System-Tab der Web-UI
   angezeigt, um spontane Neustarts ohne serielle Verbindung besser einzugrenzen.
