@@ -1,0 +1,80 @@
+# Changelog – NTP-Uhr ESP32-POE-ISO
+
+Alle wichtigen Änderungen an diesem Projekt werden hier dokumentiert.
+Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/)
+und dieses Projekt verwendet [Semantische Versionierung](https://semver.org/lang/de/).
+
+Hinweis: Für ältere Einträge vor `1.4.5` liegen in diesem Arbeitsverzeichnis
+keine belastbaren Datumsquellen mehr vor. Diese Einträge bleiben daher bis zu
+einer späteren Verifikation undatiert, statt ein Datum zu raten.
+
+## [Unreleased]
+
+## 1.4.4
+- Stabilitätsanzeige korrigiert: statt inversem Variationskoeffizient (σ/μ)
+  wird nun absoluter Jitter verwendet (σ / 5 ms). Der CV-Ansatz benachteiligte
+  lokale Server mit niedrigem RTT, obwohl deren absoluter Jitter geringer ist.
+
+## 1.4.3
+- Subsekunden-Kompensation in Scroll und Crossfade: `startStep = ms_late / ms_per_frame`
+  überspringt bereits vergangene Frames; `last_t` rückdatiert den Frame-Timer auf den
+  Framestart; `last_t += ms_per_frame` statt `delay()` verhindert Drift.
+  Zwei Uhren am gleichen NTP-Server synchronisieren auf ≤ 1 Frame (≈ 20 ms).
+
+## 1.4.2
+- 100 Mbit/s Full-Duplex erzwingen: PHY-Register BMCR (Reg 0 = 0x2100)
+  per MDIO via `esp_eth_mediator_t` auf `ETHERNET_EVENT_START` gesetzt
+  (vor AN-Beginn; ESP-IDF 4.4 hat kein `ETH_CMD_S_SPEED`)
+
+## 1.4.1
+- Netzwerkeinstellungen im Web-UI: DHCP oder statische IP (IP, Subnetz, Gateway, DNS)
+  – persistent in NVS (Namespace `"net"`), wird vor `ETH.begin()` angewendet;
+  Änderungen erfordern Neustart (automatisch nach Speichern)
+
+## 1.4.0
+- Web-UI komplett überarbeitet: 3 Tabs (Status / Einstellungen / System),
+  Toast-Benachrichtigungen, AJAX-Speichern ohne Seitenreload,
+  MAC-Adresse + Link-Speed in Status, OTA-Upload im System-Tab inline,
+  Neustart-Button (`/reboot` POST), AJAX-Polling auf 3 s beschleunigt
+
+## 1.3.4
+- Crossfade: STEPS=5/FRAME_MS=5 ms, `thresh_max`-Formel auf `(step*64)/STEPS`
+  korrigiert (funktioniert nun mit beliebiger STEPS-Anzahl, erreicht immer 100 %)
+
+## 1.3.3
+- Scroll: Basis-Frame einmalig rendern + `memcpy` statt `clearBuffer` pro Frame
+  (drastisch weniger Overhead); STEPS=5/FRAME_MS=5 ms → ~60–80 ms Gesamtdauer;
+  `SCROLL_TOTAL_MS=80` → Pre-Trigger bei 920 ms für Synchronität
+
+## 1.3.2
+- Scroll: Clip-Breite +1 px (Glyph-Artefakte rechts behoben), Geschwindigkeit
+  auf 12×20 ms=240 ms (wie Dottie); Pre-Trigger via `gettimeofday()`: Animation
+  startet 240 ms vor Sekundengrenze → endet synchron mit anderen Uhren
+
+## 1.3.1
+- Scroll: Einzelziffern statt Paare, exakte Zeichenpositionen via Präfix-Breite,
+  Geschwindigkeit 300 ms → 128 ms
+- Crossfade: Dithering nur auf veränderten Pixeln, Geschwindigkeit 360 ms → 240 ms
+
+## 1.3.0
+- Display-Animationen: Vertical Scroll (Ziffern von unten nach oben) und
+  Dither-Crossfade (Bayer-Überblendung) – per Web-UI umschaltbar, in NVS persistent;
+  nur geänderte Ziffern (HH/MM/SS) werden animiert
+
+## 1.2.0
+- OTA-Update (ArduinoOTA + Browser-Upload `/update`)
+- AJAX-Statuspolling (`/api/status`), Lux/Helligkeit/Uptime im Web-UI
+- Semantische Versionierung (Major.Minor.Patch)
+
+## 1.1.1 / REV3
+- Code-Optimierungen: `__builtin_bswap32`, `wday`/`monate` file-scope, Datums-Cache,
+  `drawIPScreen`-Throttle, `fmtLocal`-Variablenname, `LUX_ALPHA` entfernt,
+  `IT_50MS`-Kommentar korrigiert, Forward-Deklarationen entfernt
+
+## REV2
+- NTP-Abfrage in eigenem FreeRTOS-Task (Core 0) – Loop blockiert nicht mehr
+- `g_rtt_ms` von `double` auf `float` (32-bit atomar auf ESP32, kein Race-Condition-Risiko)
+
+## REV1
+- Bugfixes: UTF-8/März, Donnerstag
+- Web-UI Dark-Theme

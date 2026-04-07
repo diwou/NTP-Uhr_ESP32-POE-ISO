@@ -1,0 +1,36 @@
+{
+  "version": "0.2",
+  "language": "en,de",
+  "words": [
+    "WROOM", "wroom", "freenove", "espressif", "arduino", "littlefs",
+    "DBOARD", "PSRAM", "psram", "mfix", "DCORE", "espota",
+    "mrfaptastic", "adafruit", "Adafruit", "mathieucarbou", "bblanchon",
+    "HUB75", "hub75", "asyncwebserver", "AsyncTCP", "ArduinoJson",
+    "platformio", "xtensa", "iram", "dram", "partitions",
+    "WiFi", "wifi", "WIFI", "MDNS", "mdns", "lwip",
+    "NTP", "ntp", "POSIX", "mDNS", "captive","monat","monate",
+    "struct", "uint8", "uint16", "uint32", "int8", "int16", "int32",
+    "fillRect", "drawRect", "drawText", "drawPixel",
+    "openweathermap", "OWM", "owm", "forecast","majicdesigns",
+    "colorcode", "Freenove", "IRAM", "DRAM","ntpclock",
+    "sntp", "getreachability","nodemcuv","ldscript","Invalidierung",
+    "Moduswechsel","ipcache","invalidieren","reconnecten","invalidiert",
+    "Kolon", "Kolons","VEML","MOSFET","veml","flashen","uuml","wbox",
+    "Zifferblöcken", "Zifferpaaren","HYST","MDIO","auml","onclick",
+    "kantenbündig","Statuspolling","Versionierung","IRLZ","Stabilit",
+    "Überlapp","logisoso","moononournation","olikraus",
+    "Flacker","Crossfade",
+    "Seitenreload","BMCR","sdns","AUTONEGO",
+    "Referenztakt","Subnetzmaske","Netzwerkeinstellungen","Zeitsynchronisation",
+    "Abfrageintervall","Sekundengrenze","Sekundenwechsel","serverseitig",
+    "onchange","onsubmit","Netzwerkänderungen","Weiterleitung",
+    "Renderzeit","bayer","gedithert","Synchronität",
+    "Subsekunden","rückdatiert","Startzeitpunkt","Framestart",
+    "Mbit","memcpy","gettimeofday","bswap","wday",
+    "Stabilitätsanzeige","Variationskoeffizient","benachteiligte"
+  ],
+  "ignorePaths": [
+    ".pio/**",
+    "*.json"
+  ]
+}
