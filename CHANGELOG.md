@@ -19,10 +19,10 @@ einer späteren Verifikation undatiert, statt ein Datum zu raten.
   Der Fehler führte zu einem Binary für die falsche Architektur.
   (db00298)
 - Debug-Serial-Ausgabe der Backlight-Regelung entfernt; die sekündliche
-  Lux/PWM-Protokollierung wird nicht mehr benötigt. (174b1b5)
+  Lux/PWM-Protokollierung wird nicht mehr benötigt. (69e5ab1)
 - Reset-Grund (`g_last_reset_reason`) im HTML der Web-UI nun wie alle
   anderen Konfigurationswerte escaped; schließt die letzte Lücke im
-  HTML-Injection-Schutz aus 1.5.0. (174b1b5)
+  HTML-Injection-Schutz aus 1.5.0. (69e5ab1)
 
 ## 1.5.0 - 2026-04-07
 ### Neu
