@@ -41,9 +41,9 @@ Wichtige Pins:
 
 ## Authentifizierung
 
-Die Web-UI verwendet HTTP Basic Authentication fuer alle Aenderungen
-(POST-Endpunkte und OTA-Update). Die Statusseite und API bleiben ohne
-Auth zugaenglich.
+Die Web-UI verwendet HTTP Basic Authentication. Alle POST-Endpunkte
+und die Hauptseite sind geschuetzt. Nur der Status-API-Endpunkt
+(`/api/status`) bleibt ohne Auth fuer Monitoring-Tools zugaenglich.
 
 - **Default-Username:** `admin`
 - **Default-Passwort:** `admin`
