@@ -64,8 +64,9 @@ String htmlPage() {
   String staticSnEsc = htmlEscape(String(g_static_sn));
   String staticGwEsc = htmlEscape(String(g_static_gw));
   String staticDnsEsc = htmlEscape(String(g_static_dns));
-  String ntpDiagEsc = htmlEscape(String(g_last_ntp_status));
-  String ethForceEsc = htmlEscape(String(g_eth_force_status));
+  String ntpDiagEsc  = htmlEscape(String(g_last_ntp_status));
+  String ethForceEsc  = htmlEscape(String(g_eth_force_status));
+  String resetEsc     = htmlEscape(String(g_last_reset_reason));
 
   SyncState st = currentSyncState();
   const char *stClass = (st==SYNC_OK?"ok":st==SYNC_SYNCING?"sync":st==SYNC_STALE?"stale":st==SYNC_OFFLINE?"off":"never");
@@ -397,7 +398,7 @@ String htmlPage() {
       "<div class='grid'>"
         "<div class='cell wide'><div class='lbl'>Letzter Reset</div>"
           "<div class='val sm' id='v-reset'>";
-  html += g_last_reset_reason;
+  html += resetEsc;
   html +=
         "</div></div>"
         "<div class='cell wide'><div class='lbl'>NTP-Diagnose</div>"

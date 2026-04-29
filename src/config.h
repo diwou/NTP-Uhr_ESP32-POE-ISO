@@ -364,16 +364,6 @@ static void updateBacklightFromLux() {
   }
 
   pwm_target_global = luxToPwm(lux_hold);
-
-  static unsigned long last_dbg = 0;
-  if (now - last_dbg >= 1000) {
-    last_dbg = now;
-    Serial.print("lux=");   Serial.print(lux, 3);
-    Serial.print(" filt="); Serial.print(lux_filt, 3);
-    Serial.print(" hold="); Serial.print(lux_hold, 3);
-    Serial.print(" pwm_t=");Serial.print((int)pwm_target_global);
-    Serial.print(" pwm=");  Serial.println((int)pwm_current);
-  }
 }
 
 static void rampBacklight() {
