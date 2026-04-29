@@ -63,10 +63,10 @@ enum AnimMode  { ANIM_NONE = 0, ANIM_SCROLL = 1, ANIM_CROSSFADE = 2 };
 enum DstMode   { DST_OFF = 0, DST_EU = 1, DST_US = 2, DST_CUSTOM = 3 };
 
 // ---------- Globale Objekte ----------
-U8G2_ST7920_128X64_F_SW_SPI u8g2(U8G2_R0, LCD_CLK, LCD_SID, LCD_CS, LCD_RST);
-WebServer    server(80);
-Preferences  prefs;
-Adafruit_VEML7700 veml;
+extern U8G2_ST7920_128X64_F_SW_SPI u8g2;
+extern WebServer    server;
+extern Preferences  prefs;
+extern Adafruit_VEML7700 veml;
 
 // ---------- Globale Variablen ----------
 volatile bool   eth_got_ip  = false;

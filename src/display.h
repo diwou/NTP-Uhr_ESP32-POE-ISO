@@ -126,7 +126,7 @@ void drawIPScreen() {
 void drawStaticContent(const tm &t, bool ok, char (&dateTxt)[40], int &last_mday) {
   char midTxt[48];
   if (ok) snprintf(midTxt, sizeof(midTxt), "KW %02d - %s", isoWeek(t), wday[t.tm_wday]);
-  else    strcpy(midTxt, "KW -- - Wochentag");
+  else    snprintf(midTxt, sizeof(midTxt), "KW -- - Wochentag");
   drawCenteredAutoFontY(41, midTxt);
 
   if (ok && t.tm_mday != last_mday) {
@@ -134,7 +134,7 @@ void drawStaticContent(const tm &t, bool ok, char (&dateTxt)[40], int &last_mday
     const char *monat = (t.tm_mon >= 0 && t.tm_mon < 12) ? monate[t.tm_mon] : "?";
     snprintf(dateTxt, sizeof(dateTxt), "%d. %s %d", t.tm_mday, monat, t.tm_year + 1900);
   } else if (!ok) {
-    strcpy(dateTxt, "--. Monat ----");
+    snprintf(dateTxt, sizeof(dateTxt), "--. Monat ----");
     last_mday = -1;
   }
   drawCenteredY(54, dateTxt, u8g2_font_8x13B_tf);
@@ -338,7 +338,7 @@ void drawMainScreen(const tm *t_override = nullptr) {
   char timeTxt[16];
   if (ok) snprintf(timeTxt, sizeof(timeTxt), "%02d:%02d:%02d",
                    t_local.tm_hour, t_local.tm_min, t_local.tm_sec);
-  else    strcpy(timeTxt, "--:--:--");
+  else    snprintf(timeTxt, sizeof(timeTxt), "--:--:--");
 
   bool timeChanged = (strcmp(timeTxt, prevTimeTxt) != 0);
   bool doAnim      = timeChanged && prevTimeTxt[0] != '\0';

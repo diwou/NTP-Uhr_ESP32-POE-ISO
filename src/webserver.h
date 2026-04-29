@@ -73,7 +73,7 @@ String htmlPage() {
   const char *stLabel = (st==SYNC_OK?"Synchron":st==SYNC_SYNCING?"Syncing ...":st==SYNC_STALE?"Stale":st==SYNC_OFFLINE?"Offline":"Nie sync.");
 
   String html;
-  html.reserve(9000);
+  html.reserve(12000);
 
   html =
     "<!doctype html><html lang='de'><head>"
@@ -747,6 +747,7 @@ void handleFactoryReset() {
   server.sendHeader("Cache-Control", "no-cache");
   server.send(ok ? 200 : 500, "application/json", ok ? "{\"ok\":true}" : "{\"ok\":false}");
   if (ok) {
+    server.stop();
     delay(300);
     ESP.restart();
   }

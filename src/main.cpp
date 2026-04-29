@@ -47,6 +47,12 @@
 #include "display.h"    // Schicht 1: Display-Funktionen (nutzen config.h)
 #include "webserver.h"  // Schicht 2: Web-Handler (nutzen config.h + display.h)
 
+// ---------- Globale Objekt-Definitionen ----------
+U8G2_ST7920_128X64_F_SW_SPI u8g2(U8G2_R0, LCD_CLK, LCD_SID, LCD_CS, LCD_RST);
+WebServer    server(80);
+Preferences  prefs;
+Adafruit_VEML7700 veml;
+
 // ---------- Ethernet-Events ----------
 void WiFiEvent(arduino_event_id_t e) {
   if (e == ARDUINO_EVENT_ETH_GOT_IP) {
@@ -165,9 +171,10 @@ void setup() {
   auto forceEth100Handler = [](void*, esp_event_base_t, int32_t event_id, void* data) {
       const char *phase = (event_id == ETHERNET_EVENT_CONNECTED) ? "ETH_CONNECTED" : "ETH_START";
       if (event_id == ETHERNET_EVENT_CONNECTED) {
-        snprintf(g_eth_force_status, sizeof(g_eth_force_status),
-                 "%s: Link %uM %s", phase, (unsigned)ETH.linkSpeed(),
-                 ETH.fullDuplex() ? "Full" : "Half");
+        // Link-Diagnose nur loggen, g_eth_force_status bleibt auf ETH_START-Ergebnis
+        Serial.printf("[ETH] Link ausgehandelt: %u Mbit/s %s Duplex\n",
+                      (unsigned)ETH.linkSpeed(),
+                      ETH.fullDuplex() ? "Full" : "Half");
         return;
       }
 
@@ -257,7 +264,7 @@ void setup() {
   server.begin();
 
   // NTP-Task auf Core 0 starten (Arduino-Loop läuft auf Core 1)
-  xTaskCreatePinnedToCore(ntpTask, "ntp_query", 4096, nullptr, 1, &ntp_task_handle, 0);
+  xTaskCreatePinnedToCore(ntpTask, "ntp_query", 6144, nullptr, 1, &ntp_task_handle, 0);
 }
 
 // ---------- Loop ----------
