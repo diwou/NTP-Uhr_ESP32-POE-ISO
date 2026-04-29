@@ -89,6 +89,10 @@ AnimMode      g_anim_mode = ANIM_NONE;
 char     ntp1[64], ntp2[64], ntp3[64];
 uint32_t ntp_interval_ms = 60 * 1000UL;
 
+// ---------- Authentifizierung ----------
+char g_auth_user[32] = "admin";
+char g_auth_pass[32] = "admin";
+
 // ---------- Zeitzonen-Konfiguration ----------
 int    g_tz_offset    = 60;      // UTC-Offset in Minuten (default +1 Stunde)
 DstMode g_tz_dst_mode = DST_EU;  // Sommerzeit-Modus

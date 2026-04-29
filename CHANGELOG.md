@@ -11,7 +11,10 @@ einer späteren Verifikation undatiert, statt ein Datum zu raten.
 ## [Unreleased]
 
 ### Neu
-- Zeitzonen-Konfiguration per Web-UI: UTC-Offset (Dropdown, -12 bis +14),
+- HTTP-Basic-Authentifizierung für alle schreibenden Web-Endpunkte und
+  OTA-Update. Default-User: `admin`, Default-Passwort: `admin`. Das
+  Passwort ist im System-Tab der Web-UI änderbar und wird persistent
+  im NVS gespeichert. Statusseite und API bleiben öffentlich. (6268e2f)
   Sommerzeit-Modus (AUS/EU/US/Benutzerdefiniert), benutzerdefinierte
   DST-Regeln und DST-Versatz. Die Zeitzone wird sofort nach dem Speichern
   aktiv und persistent im NVS abgelegt. (f5ac9a8)

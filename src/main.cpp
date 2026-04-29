@@ -135,21 +135,25 @@ void setup() {
   String s3 = prefs.getString("s3", s1);
   uint32_t iv     = prefs.getULong("iv", 60 * 1000UL);
   uint8_t  anim_m = prefs.getUChar("anim", 0);
+  // Zeitzone
+  g_tz_offset      = (int)prefs.getInt("tz_off", 60);
+  g_tz_dst_mode    = (DstMode)constrain((int)prefs.getUChar("tz_dst", (uint8_t)DST_EU), 0, 3);
+  String ds = prefs.getString("tz_ds", "M3.5.0/2");
+  String de = prefs.getString("tz_de", "M10.5.0/3");
+  g_tz_dst_minutes = (int)prefs.getUShort("tz_dm", 60);
+  // Authentifizierung
+  String au = prefs.getString("au", "admin");
+  String ap = prefs.getString("ap", "admin");
   prefs.end();
   copyTrunc(ntp1, s1.c_str());
   copyTrunc(ntp2, s2.c_str());
   copyTrunc(ntp3, s3.c_str());
   ntp_interval_ms = iv ? iv : 60 * 1000UL;
   g_anim_mode = (AnimMode)constrain((int)anim_m, 0, 2);
-
-  // Zeitzone aus NVS laden
-  g_tz_offset      = (int)prefs.getInt("tz_off", 60);
-  g_tz_dst_mode    = (DstMode)constrain((int)prefs.getUChar("tz_dst", (uint8_t)DST_EU), 0, 3);
-  String ds = prefs.getString("tz_ds", "M3.5.0/2");
-  String de = prefs.getString("tz_de", "M10.5.0/3");
-  g_tz_dst_minutes = (int)prefs.getUShort("tz_dm", 60);
   copyTrunc(g_tz_dst_start, ds.c_str());
   copyTrunc(g_tz_dst_end,   de.c_str());
+  copyTrunc(g_auth_user,    au.c_str());
+  copyTrunc(g_auth_pass,    ap.c_str());
 
   // Netzwerk-Konfiguration aus NVS laden
   prefs.begin("net", true);
@@ -257,6 +261,7 @@ void setup() {
   server.on("/reboot",     HTTP_POST, handleReboot);
   server.on("/factory-reset", HTTP_POST, handleFactoryReset);
   server.on("/savenet",    HTTP_POST, handleSaveNet);
+  server.on("/change-password", HTTP_POST, handleChangePassword);
   server.onNotFound([]() {
     server.sendHeader("Location", "/");
     server.send(303);

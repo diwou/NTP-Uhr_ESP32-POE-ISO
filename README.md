@@ -37,6 +37,19 @@ Wichtige Pins:
 - ArduinoOTA ueber PlatformIO
 - Automatische Backlight-Regelung ueber VEML7700
 - Display-Animationen: normal, Vertical Scroll und Crossfade
+- HTTP-Basic-Auth zum Schutz der Einstellungen (Default: `admin`/`admin`)
+
+## Authentifizierung
+
+Die Web-UI verwendet HTTP Basic Authentication fuer alle Aenderungen
+(POST-Endpunkte und OTA-Update). Die Statusseite und API bleiben ohne
+Auth zugaenglich.
+
+- **Default-Username:** `admin`
+- **Default-Passwort:** `admin`
+
+Das Passwort kann im System-Tab der Web-UI geaendert werden und wird
+persistent im NVS gespeichert.
 
 ## Build
 

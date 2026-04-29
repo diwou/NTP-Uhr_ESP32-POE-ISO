@@ -499,6 +499,22 @@ String htmlPage() {
     "</div>"
 
     "<div class='card'>"
+      "<div class='card-hd'>Passwort &auml;ndern</div>"
+      "<form id='frm-passwd'>"
+      "<div class='field'><label>Aktuelles Passwort</label>"
+        "<input name='pw_old' type='password'></div>"
+      "<div class='field'><label>Neues Passwort</label>"
+        "<input name='pw_new' type='password'></div>"
+      "<div class='field'><label>Neues Passwort (wiederholen)</label>"
+        "<input name='pw_new2' type='password'></div>"
+      "<div class='actions'>"
+        "<button class='btn btn-p' type='submit'>&#10003; &Auml;ndern</button>"
+      "</div>"
+      "</form>"
+      "<div class='hint'>Username: <strong>" + String(g_auth_user) + "</strong> (Default: admin / admin)</div>"
+    "</div>"
+
+    "<div class='card'>"
       "<div class='card-hd'>Recovery</div>"
       "<div class='hint'>Setzt NTP-, Anzeige- und Netzwerkeinstellungen auf die Firmware-Standardwerte zur&uuml;ck und startet neu.</div>"
       "<div class='actions'>"
@@ -596,6 +612,17 @@ String htmlPage() {
         ".catch(function(){toast('Fehler','err');});"
     "}"
 
+    // Password change
+    "document.getElementById('frm-passwd').onsubmit=function(e){"
+      "e.preventDefault();"
+      "var f=new FormData(this);"
+      "if(f.get('pw_new')!==f.get('pw_new2')){toast('Passw\u00f6rter stimmen nicht \u00fcberein','err');return;}"
+      "fetch('/change-password',{method:'POST',body:f})"
+        ".then(function(r){return r.json();})"
+        ".then(function(d){toast(d.ok?'Passwort ge\u00e4ndert!':d.msg||'Fehler',d.ok?'ok':'err');})"
+        ".catch(function(){toast('Verbindungsfehler','err');});"
+    "};"
+
     // OTA upload
     "function startOTA(){"
       "var fi=document.getElementById('ota-fi').files[0];"
@@ -672,12 +699,20 @@ String htmlPage() {
 }
 
 // ---------- Web-Handler ----------
+
+static bool requireAuth() {
+  if (server.authenticate(g_auth_user, g_auth_pass)) return true;
+  server.requestAuthentication();
+  return false;
+}
+
 void handleRoot() {
   server.sendHeader("Cache-Control", "no-store");
   server.send(200, "text/html; charset=utf-8", htmlPage());
 }
 
 void handleSave() {
+  if (!requireAuth()) return;
   auto norm = [](String s) -> String { s.trim(); return s; };
   if (server.hasArg("s1")) copyTrunc(ntp1, norm(server.arg("s1")).c_str());
   if (server.hasArg("s2")) copyTrunc(ntp2, norm(server.arg("s2")).c_str());
@@ -722,12 +757,14 @@ void handleSave() {
 }
 
 void handleSync() {
+  if (!requireAuth()) return;
   have_synced = false; last_sync = 0; applySNTP();
   server.sendHeader("Cache-Control", "no-cache");
   server.send(200, "application/json", "{\"ok\":true}");
 }
 
 void handleReboot() {
+  if (!requireAuth()) return;
   server.sendHeader("Cache-Control", "no-cache");
   server.send(200, "application/json", "{\"ok\":true}");
   delay(200);
@@ -735,6 +772,7 @@ void handleReboot() {
 }
 
 void handleFactoryReset() {
+  if (!requireAuth()) return;
   bool ok = true;
   ok = ok && prefs.begin("ntp", false);
   if (ok) ok = prefs.clear();
@@ -806,6 +844,7 @@ void handleApiStatus() {
 }
 
 void handleSaveNet() {
+  if (!requireAuth()) return;
   g_use_dhcp = !server.hasArg("netmode") || server.arg("netmode") == "1";
   if (server.hasArg("ip"))  copyTrunc(g_static_ip,  server.arg("ip").c_str());
   if (server.hasArg("gw"))  copyTrunc(g_static_gw,  server.arg("gw").c_str());
@@ -824,13 +863,39 @@ void handleSaveNet() {
   ESP.restart();
 }
 
+void handleChangePassword() {
+  if (!requireAuth()) return;
+  String oldPw = server.hasArg("pw_old") ? server.arg("pw_old") : "";
+  String newPw = server.hasArg("pw_new") ? server.arg("pw_new") : "";
+
+  if (strcmp(oldPw.c_str(), g_auth_pass) != 0) {
+    server.sendHeader("Cache-Control", "no-cache");
+    server.send(400, "application/json", "{\"ok\":false,\"msg\":\"Altes Passwort falsch\"}");
+    return;
+  }
+  if (newPw.length() < 1 || newPw.length() > 31) {
+    server.sendHeader("Cache-Control", "no-cache");
+    server.send(400, "application/json", "{\"ok\":false,\"msg\":\"Passwort muss 1-31 Zeichen lang sein\"}");
+    return;
+  }
+  copyTrunc(g_auth_pass, newPw.c_str());
+  prefs.begin("ntp", false);
+  prefs.putString("au", g_auth_user);
+  prefs.putString("ap", g_auth_pass);
+  prefs.end();
+  server.sendHeader("Cache-Control", "no-cache");
+  server.send(200, "application/json", "{\"ok\":true}");
+}
+
 void handleOTAPage() {
+  if (!requireAuth()) return;
   // Weiterleitung auf Haupt-UI, System-Tab
   server.sendHeader("Location", "/#t-system");
   server.send(302);
 }
 
 void handleOTAUpload() {
+  if (!requireAuth()) { return; }
   HTTPUpload &upload = server.upload();
   static size_t display_at = 0;
   if (upload.status == UPLOAD_FILE_START) {
@@ -871,6 +936,7 @@ void handleOTAUpload() {
 }
 
 void handleOTAPost() {
+  if (!requireAuth()) { return; }
   server.sendHeader("Connection", "close");
   server.send(Update.hasError() ? 500 : 200, "text/plain",
               Update.hasError() ? "FEHLER" : "OK");
