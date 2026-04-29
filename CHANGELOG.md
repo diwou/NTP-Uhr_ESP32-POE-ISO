@@ -14,6 +14,7 @@ einer späteren Verifikation undatiert, statt ein Datum zu raten.
 - `platformio.ini`: OTA-Environment `esp32-poe-iso_ota` erbt nun von
   `env:esp32-poe-iso` statt dem falschen `env:nodemcuv2` (ESP8266).
   Der Fehler führte zu einem Binary für die falsche Architektur.
+  (db00298)
 
 ## 1.5.0 - 2026-04-07
 ### Neu
