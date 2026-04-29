@@ -10,6 +10,9 @@ einer späteren Verifikation undatiert, statt ein Datum zu raten.
 
 ## [Unreleased]
 
+### Dokumentation
+- `docs/RELEASING.md` ins Repository aufgenommen. (e0c864c)
+
 ### Behoben
 - `platformio.ini`: OTA-Environment `esp32-poe-iso_ota` erbt nun von
   `env:esp32-poe-iso` statt dem falschen `env:nodemcuv2` (ESP8266).
