@@ -328,6 +328,67 @@ String htmlPage() {
         "</select></div>"
     "</div>"
 
+    "<div class='card'>"
+      "<div class='card-hd'>Zeitzone</div>"
+      "<div class='field'><label>UTC-Offset</label>"
+        "<select name='tz_off'>"
+          "<option value='-720'"; html += (g_tz_offset==-720?" selected":""); html += ">UTC-12</option>"
+          "<option value='-660'"; html += (g_tz_offset==-660?" selected":""); html += ">UTC-11</option>"
+          "<option value='-600'"; html += (g_tz_offset==-600?" selected":""); html += ">UTC-10</option>"
+          "<option value='-540'"; html += (g_tz_offset==-540?" selected":""); html += ">UTC-9</option>"
+          "<option value='-480'"; html += (g_tz_offset==-480?" selected":""); html += ">UTC-8</option>"
+          "<option value='-420'"; html += (g_tz_offset==-420?" selected":""); html += ">UTC-7</option>"
+          "<option value='-360'"; html += (g_tz_offset==-360?" selected":""); html += ">UTC-6</option>"
+          "<option value='-300'"; html += (g_tz_offset==-300?" selected":""); html += ">UTC-5</option>"
+          "<option value='-240'"; html += (g_tz_offset==-240?" selected":""); html += ">UTC-4</option>"
+          "<option value='-180'"; html += (g_tz_offset==-180?" selected":""); html += ">UTC-3</option>"
+          "<option value='-120'"; html += (g_tz_offset==-120?" selected":""); html += ">UTC-2</option>"
+          "<option value='-60'";  html += (g_tz_offset==-60?" selected":"");  html += ">UTC-1</option>"
+          "<option value='0'";    html += (g_tz_offset==0?" selected":"");    html += ">UTC±0</option>"
+          "<option value='60'";   html += (g_tz_offset==60?" selected":"");   html += ">UTC+1</option>"
+          "<option value='120'";  html += (g_tz_offset==120?" selected":"");  html += ">UTC+2</option>"
+          "<option value='180'";  html += (g_tz_offset==180?" selected":"");  html += ">UTC+3</option>"
+          "<option value='240'";  html += (g_tz_offset==240?" selected":"");  html += ">UTC+4</option>"
+          "<option value='300'";  html += (g_tz_offset==300?" selected":"");  html += ">UTC+5</option>"
+          "<option value='330'";  html += (g_tz_offset==330?" selected":"");  html += ">UTC+5:30</option>"
+          "<option value='360'";  html += (g_tz_offset==360?" selected":"");  html += ">UTC+6</option>"
+          "<option value='420'";  html += (g_tz_offset==420?" selected":"");  html += ">UTC+7</option>"
+          "<option value='480'";  html += (g_tz_offset==480?" selected":"");  html += ">UTC+8</option>"
+          "<option value='540'";  html += (g_tz_offset==540?" selected":"");  html += ">UTC+9</option>"
+          "<option value='570'";  html += (g_tz_offset==570?" selected":"");  html += ">UTC+9:30</option>"
+          "<option value='600'";  html += (g_tz_offset==600?" selected":"");  html += ">UTC+10</option>"
+          "<option value='660'";  html += (g_tz_offset==660?" selected":"");  html += ">UTC+11</option>"
+          "<option value='720'";  html += (g_tz_offset==720?" selected":"");  html += ">UTC+12</option>"
+          "<option value='780'";  html += (g_tz_offset==780?" selected":"");  html += ">UTC+13</option>"
+          "<option value='840'";  html += (g_tz_offset==840?" selected":"");  html += ">UTC+14</option>"
+        "</select></div>"
+      "<div class='field'><label>Sommerzeit</label>"
+        "<select name='tz_dst' onchange='toggleDstFields()'>"
+          "<option value='0'"; html += (g_tz_dst_mode==DST_OFF?" selected":"");    html += ">AUS</option>"
+          "<option value='1'"; html += (g_tz_dst_mode==DST_EU?" selected":"");     html += ">EU (M3.5.0/2 – M10.5.0/3)</option>"
+          "<option value='2'"; html += (g_tz_dst_mode==DST_US?" selected":"");     html += ">US (M3.2.0/2 – M11.1.0/2)</option>"
+          "<option value='3'"; html += (g_tz_dst_mode==DST_CUSTOM?" selected":""); html += ">Benutzerdefiniert</option>"
+        "</select></div>"
+      "<div id='dst-custom' style='display:"; html += (g_tz_dst_mode==DST_CUSTOM?"block":"none"); html += "'>"
+        "<div class='field'><label>Sommerzeit-Anfang (Regel)</label>"
+          "<input name='tz_ds' value='";
+  html += htmlEscape(String(g_tz_dst_start));
+  html +=
+          "' placeholder='M3.5.0/2'></div>"
+        "<div class='field'><label>Sommerzeit-Ende (Regel)</label>"
+          "<input name='tz_de' value='";
+  html += htmlEscape(String(g_tz_dst_end));
+  html +=
+          "' placeholder='M10.5.0/3'></div>"
+        "<div class='field'><label>Sommerzeit-Versatz (Minuten)</label>"
+          "<input name='tz_dm' type='number' min='1' max='180' value='";
+  html += String(g_tz_dst_minutes);
+  html +=
+          "'></div>"
+      "</div>"
+      "<div class='hint'>Zeitzonen&auml;nderungen werden nach dem Speichern sofort aktiv.</div>"
+    "</div>"
+
     "<div class='actions'>"
       "<button class='btn btn-p' type='submit'>&#10003; Speichern</button>"
     "</div>"
@@ -503,6 +564,12 @@ String htmlPage() {
     "}"
     "toggleStatic();"
 
+    // Zeitzone: benutzerdefinierte DST-Felder ein-/ausblenden
+    "function toggleDstFields(){"
+      "var v=document.querySelector('[name=tz_dst]').value;"
+      "document.getElementById('dst-custom').style.display=v==='3'?'block':'none';"
+    "}"
+
     // Netzwerk speichern (POST /savenet, dann Neustart serverseitig)
     "function saveNet(){"
       "if(!confirm('Netzwerkeinstellungen speichern und neu starten?'))return;"
@@ -623,12 +690,33 @@ void handleSave() {
     int m = server.arg("anim").toInt();
     if (m >= 0 && m <= 2) g_anim_mode = (AnimMode)m;
   }
+  if (server.hasArg("tz_off")) {
+    g_tz_offset = (int)server.arg("tz_off").toInt();
+  }
+  if (server.hasArg("tz_dst")) {
+    int m = server.arg("tz_dst").toInt();
+    if (m >= 0 && m <= 3) g_tz_dst_mode = (DstMode)m;
+  }
+  if (server.hasArg("tz_ds")) copyTrunc(g_tz_dst_start, server.arg("tz_ds").c_str());
+  if (server.hasArg("tz_de")) copyTrunc(g_tz_dst_end,   server.arg("tz_de").c_str());
+  if (server.hasArg("tz_dm")) {
+    long m = server.arg("tz_dm").toInt();
+    g_tz_dst_minutes = (int)constrain(m, 1, 180);
+  }
   prefs.begin("ntp", false);
   prefs.putString("s1", ntp1); prefs.putString("s2", ntp2); prefs.putString("s3", ntp3);
   prefs.putULong("iv", ntp_interval_ms);
   prefs.putUChar("anim", (uint8_t)g_anim_mode);
+  prefs.putInt("tz_off", g_tz_offset);
+  prefs.putUChar("tz_dst", (uint8_t)g_tz_dst_mode);
+  prefs.putString("tz_ds", g_tz_dst_start);
+  prefs.putString("tz_de", g_tz_dst_end);
+  prefs.putUShort("tz_dm", (uint16_t)g_tz_dst_minutes);
   prefs.end();
   applySNTP();
+  char tz_str[64];
+  buildTZString(tz_str, sizeof(tz_str));
+  setenv("TZ", tz_str, 1); tzset();
   server.sendHeader("Cache-Control", "no-cache");
   server.send(200, "application/json", "{\"ok\":true}");
 }
@@ -677,7 +765,9 @@ void handleApiStatus() {
   String reset_json = jsonEscape(String(g_last_reset_reason));
   String ntp_diag_json = jsonEscape(String(g_last_ntp_status));
   String eth_force_json = jsonEscape(String(g_eth_force_status));
-  char json[1300];
+  char tz_built[64]; buildTZString(tz_built, sizeof(tz_built));
+  String tz_json = jsonEscape(String(tz_built));
+  char json[1550];
   snprintf(json, sizeof(json),
     "{\"ip\":\"%s\",\"mac\":\"%s\",\"link_mbps\":%d,"
     "\"full_duplex\":%s,"
@@ -686,7 +776,8 @@ void handleApiStatus() {
     "\"rtt_ms\":%d,\"stability_pct\":%d,\"interval_min\":%lu,"
     "\"last_sync\":\"%s\",\"lux\":%.1f,\"backlight_pct\":%d,"
     "\"uptime_s\":%lu,\"anim\":%d,\"fw\":\"%s\","
-    "\"reset\":\"%s\",\"ntp_diag\":\"%s\",\"eth_force\":\"%s\"}",
+    "\"reset\":\"%s\",\"ntp_diag\":\"%s\",\"eth_force\":\"%s\","
+    "\"tz_offset\":%d,\"tz_dst_mode\":%d,\"tz_dst_min\":%d,\"tz_str\":\"%s\"}",
     ip_s.c_str(),
     mac_s.c_str(),
     eth_got_ip ? (int)ETH.linkSpeed() : 0,
@@ -706,7 +797,9 @@ void handleApiStatus() {
     FW_VERSION_STR,
     reset_json.c_str(),
     ntp_diag_json.c_str(),
-    eth_force_json.c_str());
+    eth_force_json.c_str(),
+    g_tz_offset, (int)g_tz_dst_mode, g_tz_dst_minutes,
+    tz_json.c_str());
   server.sendHeader("Cache-Control", "no-cache");
   server.send(200, "application/json", json);
 }

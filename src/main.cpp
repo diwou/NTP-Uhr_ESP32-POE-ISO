@@ -51,7 +51,9 @@
 void WiFiEvent(arduino_event_id_t e) {
   if (e == ARDUINO_EVENT_ETH_GOT_IP) {
     eth_got_ip = true; ui_state = UI_SHOW_IP; ui_since = millis();
-    setenv("TZ", "CET-1CEST,M3.5.0,M10.5.0/3", 1); tzset();
+    char tz_str[64];
+    buildTZString(tz_str, sizeof(tz_str));
+    setenv("TZ", tz_str, 1); tzset();
     applySNTP();
     if (ntp_task_handle) xTaskNotifyGive(ntp_task_handle);
     if (!ota_ready) { ArduinoOTA.begin(); ota_ready = true; }
@@ -133,6 +135,15 @@ void setup() {
   copyTrunc(ntp3, s3.c_str());
   ntp_interval_ms = iv ? iv : 60 * 1000UL;
   g_anim_mode = (AnimMode)constrain((int)anim_m, 0, 2);
+
+  // Zeitzone aus NVS laden
+  g_tz_offset      = (int)prefs.getInt("tz_off", 60);
+  g_tz_dst_mode    = (DstMode)constrain((int)prefs.getUChar("tz_dst", (uint8_t)DST_EU), 0, 3);
+  String ds = prefs.getString("tz_ds", "M3.5.0/2");
+  String de = prefs.getString("tz_de", "M10.5.0/3");
+  g_tz_dst_minutes = (int)prefs.getUShort("tz_dm", 60);
+  copyTrunc(g_tz_dst_start, ds.c_str());
+  copyTrunc(g_tz_dst_end,   de.c_str());
 
   // Netzwerk-Konfiguration aus NVS laden
   prefs.begin("net", true);

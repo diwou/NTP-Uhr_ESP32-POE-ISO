@@ -22,6 +22,9 @@ static const uint8_t LCD_CLK = 14; // E   -> über 74HCT245 zu ST7920 Pin 6
 static const uint8_t LCD_SID = 13; // R/W -> über 74HCT245 zu ST7920 Pin 5
 static const uint8_t LCD_RST = 4;  // RST -> über 74HCT245 zu ST7920 Pin 17
 
+// Display-Buffer-Größe (128×64 = 8192 Pixel / 8 Bits = 1024 Byte)
+static const size_t DISPLAY_BUF_SIZE = 1024;
+
 // ---------- Helligkeit (VEML7700 + PWM Backlight) ----------
 static const int I2C_SDA = 32;
 static const int I2C_SCL = 33;
@@ -57,6 +60,7 @@ static const uint32_t      NTP_UNIX_EPOCH_DIFF = 2208988800UL;
 enum UiState   { UI_BOOT, UI_SHOW_IP, UI_RUN };
 enum SyncState { SYNC_OFFLINE, SYNC_NEVER, SYNC_SYNCING, SYNC_OK, SYNC_STALE };
 enum AnimMode  { ANIM_NONE = 0, ANIM_SCROLL = 1, ANIM_CROSSFADE = 2 };
+enum DstMode   { DST_OFF = 0, DST_EU = 1, DST_US = 2, DST_CUSTOM = 3 };
 
 // ---------- Globale Objekte ----------
 U8G2_ST7920_128X64_F_SW_SPI u8g2(U8G2_R0, LCD_CLK, LCD_SID, LCD_CS, LCD_RST);
@@ -85,6 +89,13 @@ AnimMode      g_anim_mode = ANIM_NONE;
 char     ntp1[64], ntp2[64], ntp3[64];
 uint32_t ntp_interval_ms = 60 * 1000UL;
 
+// ---------- Zeitzonen-Konfiguration ----------
+int    g_tz_offset    = 60;      // UTC-Offset in Minuten (default +1 Stunde)
+DstMode g_tz_dst_mode = DST_EU;  // Sommerzeit-Modus
+char   g_tz_dst_start[16]  = "M3.5.0/2";   // EU: letzter Sonntag März, 2:00
+char   g_tz_dst_end[16]    = "M10.5.0/3";  // EU: letzter Sonntag Oktober, 3:00
+int    g_tz_dst_minutes    = 60;            // Sommerzeit-Versatz in Minuten
+
 // ---------- Netzwerk-Konfiguration ----------
 bool g_use_dhcp     = true;
 char g_static_ip[16]  = "192.168.1.100";
@@ -94,6 +105,7 @@ char g_static_dns[16] = "8.8.8.8";
 
 double rtt_hist[STAB_SAMPLES];
 int    rtt_count = 0, rtt_index = 0;
+static portMUX_TYPE rtt_spinlock = portMUX_INITIALIZER_UNLOCKED;
 
 static unsigned long last_lux_ms       = 0;
 static unsigned long bl_warmup_until_ms = 0;
@@ -281,17 +293,26 @@ bool ntpQueryOnce(const char *host, uint8_t &outStratum, double &outRTTms) {
 
 void addRttSample(double rtt) {
   if (isnan(rtt)) return;
+  portENTER_CRITICAL(&rtt_spinlock);
   if (rtt_count < STAB_SAMPLES) rtt_hist[rtt_count++] = rtt;
   else { rtt_hist[rtt_index] = rtt; rtt_index = (rtt_index + 1) % STAB_SAMPLES; }
+  portEXIT_CRITICAL(&rtt_spinlock);
 }
 
 bool rttStats(double &mean, double &sd) {
-  if (rtt_count == 0) return false;
-  double sum = 0; for (int i = 0; i < rtt_count; i++) sum += rtt_hist[i];
-  mean = sum / rtt_count;
-  if (rtt_count == 1) { sd = NAN; return true; }
-  double v = 0; for (int i = 0; i < rtt_count; i++) { double d = rtt_hist[i]-mean; v += d*d; }
-  sd = sqrt(v / (rtt_count - 1)); return true;
+  double buf[STAB_SAMPLES];
+  int    count;
+  portENTER_CRITICAL(&rtt_spinlock);
+  count = rtt_count;
+  memcpy(buf, rtt_hist, count * sizeof(double));
+  portEXIT_CRITICAL(&rtt_spinlock);
+
+  if (count == 0) return false;
+  double sum = 0; for (int i = 0; i < count; i++) sum += buf[i];
+  mean = sum / count;
+  if (count == 1) { sd = NAN; return true; }
+  double v = 0; for (int i = 0; i < count; i++) { double d = buf[i]-mean; v += d*d; }
+  sd = sqrt(v / (count - 1)); return true;
 }
 
 int stabilityPercent() {
@@ -386,6 +407,41 @@ static void rampBacklight() {
 }
 
 // ---------- Zeit-Formatierung ----------
+void buildTZString(char *buf, size_t bufsz) {
+  int posix_off = -(g_tz_offset / 60);
+  int extra_min = abs(g_tz_offset) % 60;
+
+  if (extra_min == 0) {
+    if (posix_off < 0) snprintf(buf, bufsz, "STD%d", posix_off);
+    else               snprintf(buf, bufsz, "STD%d", posix_off);
+  } else {
+    if (posix_off < 0) snprintf(buf, bufsz, "STD%d:%02d", posix_off, extra_min);
+    else               snprintf(buf, bufsz, "STD%d:%02d", posix_off, extra_min);
+  }
+
+  if (g_tz_dst_mode == DST_OFF) return;
+
+  const char *start_rule, *end_rule;
+  switch (g_tz_dst_mode) {
+    case DST_EU:  start_rule = "M3.5.0/2";  end_rule = "M10.5.0/3"; break;
+    case DST_US:  start_rule = "M3.2.0/2";  end_rule = "M11.1.0/2"; break;
+    case DST_CUSTOM: start_rule = g_tz_dst_start; end_rule = g_tz_dst_end; break;
+    default: return;
+  }
+
+  char suffix[64];
+  if (g_tz_dst_minutes == 60) {
+    snprintf(suffix, sizeof(suffix), "DST,%s,%s", start_rule, end_rule);
+  } else {
+    int dst_h = g_tz_dst_minutes / 60;
+    int dst_m = g_tz_dst_minutes % 60;
+    if (dst_m == 0)
+      snprintf(suffix, sizeof(suffix), "DST%d,%s,%s", dst_h, start_rule, end_rule);
+    else
+      snprintf(suffix, sizeof(suffix), "DST%d:%02d,%s,%s", dst_h, dst_m, start_rule, end_rule);
+  }
+  strncat(buf, suffix, bufsz - strlen(buf) - 1);
+}
 String fmtLocal(time_t t) {
   if (t == 0) return "–";
   tm ltm; localtime_r(&t, &ltm);

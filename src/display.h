@@ -187,12 +187,12 @@ void animateScroll(const char *oldTxt, const char *newTxt,
 
   // Basis-Frame einmalig rendern (statischer Inhalt + neue Zeitzeile für unveränderte Zeichen).
   // Dieser Buffer wird jedes Frame als Ausgangspunkt kopiert – spart clearBuffer+drawAll pro Frame.
-  static uint8_t base_buf[1024];
+  static uint8_t base_buf[DISPLAY_BUF_SIZE];
   u8g2.clearBuffer();
   drawStaticContent(t, ok, dateTxt, last_mday);
   u8g2.setFont(u8g2_font_logisoso28_tf);
   drawTimeAnchored(28, newTxt, u8g2_font_logisoso28_tf);
-  memcpy(base_buf, u8g2.getBufferPtr(), 1024);
+  memcpy(base_buf, u8g2.getBufferPtr(), DISPLAY_BUF_SIZE);
 
   uint8_t *buf = u8g2.getBufferPtr();
 
@@ -213,7 +213,7 @@ void animateScroll(const char *oldTxt, const char *newTxt,
     int offset = (step * FONT_H) / STEPS;
 
     // Basis-Frame wiederherstellen (statischer Inhalt + unveränderte Zeichen korrekt)
-    memcpy(buf, base_buf, 1024);
+    memcpy(buf, base_buf, DISPLAY_BUF_SIZE);
 
     // Jede geänderte Ziffer einzeln scrollen
     u8g2.setFont(u8g2_font_logisoso28_tf);
@@ -259,13 +259,13 @@ void animateCrossfade(const uint8_t *old_buf, const char *newTxt,
                       const tm &t, bool ok,
                       char (&dateTxt)[40], int &last_mday) {
   static const int STEPS   = 3;    // Anzahl Schritte – wie beim Scroll anpassbar
-  static uint8_t   new_buf[1024]; // neuer Frame, einmal gerendert
+  static uint8_t   new_buf[DISPLAY_BUF_SIZE]; // neuer Frame, einmal gerendert
 
   // Neuen Frame einmalig aufbauen und sichern
   u8g2.clearBuffer();
   drawStaticContent(t, ok, dateTxt, last_mday);
   drawTimeAnchored(28, newTxt, u8g2_font_logisoso28_tf);
-  memcpy(new_buf, u8g2.getBufferPtr(), 1024);
+  memcpy(new_buf, u8g2.getBufferPtr(), DISPLAY_BUF_SIZE);
 
   uint8_t *buf = u8g2.getBufferPtr();
 
@@ -315,7 +315,7 @@ void animateCrossfade(const uint8_t *old_buf, const char *newTxt,
   }
 
   // Neuen Frame abschließend im Buffer hinterlassen (für cf_old_buf-Sicherung)
-  memcpy(buf, new_buf, 1024);
+  memcpy(buf, new_buf, DISPLAY_BUF_SIZE);
 }
 
 // ---------- Hauptanzeige ----------
@@ -324,7 +324,7 @@ void drawMainScreen(const tm *t_override = nullptr) {
   static char    prevTimeTxt[16]  = "";
   static char    dateTxt[40]      = "--. Monat ----";
   static int     last_mday        = -1;
-  static uint8_t cf_old_buf[1024];  // Letzter gesendeter Frame für Crossfade
+  static uint8_t cf_old_buf[DISPLAY_BUF_SIZE];  // Letzter gesendeter Frame für Crossfade
 
   tm t_local;
   bool ok;
@@ -361,6 +361,6 @@ void drawMainScreen(const tm *t_override = nullptr) {
 
   // Aktuellen Frame für nächsten Crossfade sichern
   if (g_anim_mode == ANIM_CROSSFADE) {
-    memcpy(cf_old_buf, u8g2.getBufferPtr(), 1024);
+    memcpy(cf_old_buf, u8g2.getBufferPtr(), DISPLAY_BUF_SIZE);
   }
 }

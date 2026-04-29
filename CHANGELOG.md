@@ -10,10 +10,18 @@ einer späteren Verifikation undatiert, statt ein Datum zu raten.
 
 ## [Unreleased]
 
-### Dokumentation
-- `docs/RELEASING.md` ins Repository aufgenommen. (e0c864c)
+### Neu
+- Zeitzonen-Konfiguration per Web-UI: UTC-Offset (Dropdown, -12 bis +14),
+  Sommerzeit-Modus (AUS/EU/US/Benutzerdefiniert), benutzerdefinierte
+  DST-Regeln und DST-Versatz. Die Zeitzone wird sofort nach dem Speichern
+  aktiv und persistent im NVS abgelegt. (0716945)
 
 ### Behoben
+- Race-Condition am RTT-Ringpuffer (`rtt_hist[]`/`rtt_count`/`rtt_index`)
+  durch `portMUX_TYPE`-Spinlock geschützt; `rttStats()` kopiert den Puffer
+  unter Lock für konsistente Berechnung. (0716945)
+- Display-Buffer-Größe von hartcodierten `1024` auf zentrale Konstante
+  `DISPLAY_BUF_SIZE` umgestellt. (0716945)
 - `platformio.ini`: OTA-Environment `esp32-poe-iso_ota` erbt nun von
   `env:esp32-poe-iso` statt dem falschen `env:nodemcuv2` (ESP8266).
   Der Fehler führte zu einem Binary für die falsche Architektur.
