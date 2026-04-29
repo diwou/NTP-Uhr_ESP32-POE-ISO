@@ -707,6 +707,7 @@ static bool requireAuth() {
 }
 
 void handleRoot() {
+  if (!requireAuth()) return;
   server.sendHeader("Cache-Control", "no-store");
   server.send(200, "text/html; charset=utf-8", htmlPage());
 }
