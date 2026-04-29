@@ -24,16 +24,16 @@ einer späteren Verifikation undatiert, statt ein Datum zu raten.
   `DISPLAY_BUF_SIZE` umgestellt. (f5ac9a8)
 - Globale Objekte (`u8g2`, `server`, `prefs`, `veml`) als `extern` in
   `config.h` deklariert und in `main.cpp` definiert; verhindert
-  ODR-Verletzung bei mehreren Übersetzungseinheiten. (09790e7)
-- `html.reserve()` von 9000 auf 12000 Bytes erhöht. (09790e7)
-- NTP-Task-Stack von 4096 auf 6144 Bytes erhöht. (09790e7)
+  ODR-Verletzung bei mehreren Übersetzungseinheiten. (e12bd41)
+- `html.reserve()` von 9000 auf 12000 Bytes erhöht. (e12bd41)
+- NTP-Task-Stack von 4096 auf 6144 Bytes erhöht. (e12bd41)
 - `handleFactoryReset()` stoppt den Webserver (`server.stop()`) vor
   `ESP.restart()`, um Race-Conditions mit eingehenden Requests zu
-  vermeiden. (09790e7)
+  vermeiden. (e12bd41)
 - `strcpy`-Aufrufe in `display.h` durch `snprintf` mit Puffergröße
-  ersetzt, konsistent zum restlichen Code. (09790e7)
+  ersetzt, konsistent zum restlichen Code. (e12bd41)
 - `g_eth_force_status` wird nicht mehr vom `ETH_CONNECTED`-Handler
-  überschrieben; Link-Diagnose läuft nur noch über Serial-Log. (09790e7)
+  überschrieben; Link-Diagnose läuft nur noch über Serial-Log. (e12bd41)
 - `platformio.ini`: OTA-Environment `esp32-poe-iso_ota` erbt nun von
   `env:esp32-poe-iso` statt dem falschen `env:nodemcuv2` (ESP8266).
   Der Fehler führte zu einem Binary für die falsche Architektur.
